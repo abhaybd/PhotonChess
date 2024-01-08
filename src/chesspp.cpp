@@ -18,7 +18,7 @@ std::vector<std::string_view> split(std::string_view s, char delim) {
 	while (true) {
 		int nextIdx = s.find(delim, idx);
 		if (nextIdx != std::string_view::npos) {
-			vec.push_back(s.substr(idx, nextIdx));
+			vec.push_back(s.substr(idx, nextIdx - idx));
 			idx = nextIdx + 1;
 		} else {
 			vec.push_back(s.substr(idx));
@@ -157,7 +157,7 @@ board_t MakeBoard(std::string_view fen) {
 
 				auto& arr = isWhite ? board.white : board.black;
 				piece_t p = CharToPiece(c);
-				arr[static_cast<int>(p)] |= 1 << squareIdx;
+				arr[static_cast<int>(p)] |= 1L << squareIdx;
 				squareIdx++;
 			}
 		}
@@ -182,19 +182,49 @@ board_t MakeBoard(std::string_view fen) {
 
 	board.enPassant = parts[3] == "-" ? -1 : ParseSquare(parts[3]);
 	auto halfmoveRet = std::from_chars(parts[4].begin(), parts[4].end(), board.halfmoveClock);
-    CHECK_F(halfmoveRet.ec == std::errc{}, "Unable to parse halfmove clock string: %s", parts[4]);
-    auto fullmoveRet = std::from_chars(parts[5].begin(), parts[5].end(), board.fullmove);
-    CHECK_F(fullmoveRet.ec == std::errc{}, "Unable to parse fullmove string: %s", parts[5]);
+	CHECK_F(halfmoveRet.ec == std::errc{}, "Unable to parse halfmove clock string: %.*s",
+			static_cast<int>(parts[4].length()), parts[4].data());
+	auto fullmoveRet = std::from_chars(parts[5].begin(), parts[5].end(), board.fullmove);
+	CHECK_F(fullmoveRet.ec == std::errc{}, "Unable to parse fullmove string: %.*s",
+			static_cast<int>(parts[5].length()), parts[5].data());
 
-    return board;
+	return board;
 }
 
 board_t DefaultBoard() {
 	return MakeBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 }
 
-move_t MakeMove(std::string_view longNotation) {
-	// TODO: implement
+move_t MakeMove(player_t player, std::string_view longNotation) {
+	move_t move;
+	if (longNotation == "O-O") {
+        if (player == player_t::white) {
+            move.from = ParseSquare("e1");
+            move.to = ParseSquare("g1");
+        } else {
+            move.from = ParseSquare("e8");
+            move.to = ParseSquare("g8");
+        }
+	} else if (longNotation == "O-O-O") {
+        if (player == player_t::white) {
+            move.from = ParseSquare("e1");
+            move.to = ParseSquare("c1");
+        } else {
+            move.from = ParseSquare("e8");
+            move.to = ParseSquare("c8");
+        }
+	} else {
+		CHECK_F(longNotation.length() == 5 || longNotation.length() == 6,
+				"Invalid format for long notation: %.*s",
+				static_cast<int>(longNotation.length()), longNotation.data());
+		if (longNotation.length() == 6) {
+            CharToPiece(longNotation[0]);
+			longNotation = longNotation.substr(1);
+		}
+		move.from = ParseSquare(longNotation.substr(0, 2));
+		move.to = ParseSquare(longNotation.substr(3));
+	}
+	return move;
 }
 
 } // namespace chesspp

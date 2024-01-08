@@ -33,7 +33,7 @@ enum class piece_t {
 struct move_t;
 
 struct board_t {
-	board_t() : metadata(0), enPassant(0), halfmoveClock(0), fullmove(0) {
+	board_t() : metadata(0), enPassant(-1), halfmoveClock(0), fullmove(0) {
 		for (auto& x : white) {
 			x = 0;
 		}
@@ -78,6 +78,6 @@ struct move_t {
 
 board_t MakeBoard(std::string_view fen);
 board_t DefaultBoard();
-move_t MakeMove(std::string_view longNotation);
+move_t MakeMove(player_t player, std::string_view longNotation);
 
 } // namespace chesspp

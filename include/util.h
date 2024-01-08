@@ -10,6 +10,6 @@ bool CheckOccupancy(bitboard_t bitboard, int idx);
 char PieceToChar(piece_t piece);
 piece_t CharToPiece(char c);
 
-int ParseSquare(std::string_view s);
+uint8_t ParseSquare(std::string_view s);
 
 } // namespace chesspp::util

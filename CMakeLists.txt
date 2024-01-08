@@ -16,13 +16,14 @@ FetchContent_Declare(LoguruGitRepo
 	GIT_TAG        "master"
 )
 FetchContent_MakeAvailable(LoguruGitRepo) # defines target 'loguru::loguru'
+link_libraries(loguru::loguru -ldl)
 
 # Testing
 
 FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG v2.13.4 # or a later release
+        GIT_TAG v3.4.0 # or a later release
 )
 
 FetchContent_MakeAvailable(Catch2)
@@ -38,5 +39,11 @@ target_link_libraries(chesspp_lib PRIVATE loguru::loguru)
 add_executable(chesspp src/main.cpp)
 target_link_libraries(chesspp chesspp_lib)
 
-# add_executable(tests)
-# target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+add_executable(tests
+    test/CoreTest.cpp
+)
+target_link_libraries(tests PRIVATE
+    Catch2::Catch2WithMain
+    chesspp_lib
+)
+target_include_directories(tests PRIVATE "include")
