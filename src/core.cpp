@@ -1,6 +1,5 @@
-#include "chesspp.h"
-
-#include "util.h"
+#include "chesspp/core.h"
+#include "chesspp/util.h"
 
 #include <assert.h>
 #include <charconv>
@@ -198,27 +197,27 @@ board_t DefaultBoard() {
 move_t MakeMove(player_t player, std::string_view longNotation) {
 	move_t move;
 	if (longNotation == "O-O") {
-        if (player == player_t::white) {
-            move.from = ParseSquare("e1");
-            move.to = ParseSquare("g1");
-        } else {
-            move.from = ParseSquare("e8");
-            move.to = ParseSquare("g8");
-        }
+		if (player == player_t::white) {
+			move.from = ParseSquare("e1");
+			move.to = ParseSquare("g1");
+		} else {
+			move.from = ParseSquare("e8");
+			move.to = ParseSquare("g8");
+		}
 	} else if (longNotation == "O-O-O") {
-        if (player == player_t::white) {
-            move.from = ParseSquare("e1");
-            move.to = ParseSquare("c1");
-        } else {
-            move.from = ParseSquare("e8");
-            move.to = ParseSquare("c8");
-        }
+		if (player == player_t::white) {
+			move.from = ParseSquare("e1");
+			move.to = ParseSquare("c1");
+		} else {
+			move.from = ParseSquare("e8");
+			move.to = ParseSquare("c8");
+		}
 	} else {
 		CHECK_F(longNotation.length() == 5 || longNotation.length() == 6,
 				"Invalid format for long notation: %.*s",
 				static_cast<int>(longNotation.length()), longNotation.data());
 		if (longNotation.length() == 6) {
-            CharToPiece(longNotation[0]);
+			CharToPiece(longNotation[0]);
 			longNotation = longNotation.substr(1);
 		}
 		move.from = ParseSquare(longNotation.substr(0, 2));

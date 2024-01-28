@@ -1,4 +1,4 @@
-#include "util.h"
+#include "chesspp/util.h"
 
 #include <loguru.hpp>
 

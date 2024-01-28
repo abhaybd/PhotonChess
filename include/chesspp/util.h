@@ -1,6 +1,6 @@
 #pragma once
 
-#include "chesspp.h"
+#include "chesspp/core.h"
 
 namespace chesspp::util {
 

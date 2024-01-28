@@ -30,7 +30,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_library(chesspp_lib STATIC)
 target_sources(chesspp_lib PRIVATE
-    src/chesspp.cpp
+    src/core.cpp
     src/util.cpp
 )
 target_include_directories(chesspp_lib PUBLIC "include")
