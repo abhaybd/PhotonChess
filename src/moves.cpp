@@ -1,3 +1,5 @@
+#include "moves.h"
+
 #include "photon/util.h"
 
 #include <assert.h>
@@ -37,11 +39,8 @@ void addMoves(bitboard_t bb, int offset, std::vector<move_t>& moves) {
 }
 } // namespace
 
-void PawnMoves(const board_t& board, player_t player, std::vector<move_t>& moves) {
-	bitboard_t pawns = board.getBitboard(player, piece_t::pawn);
-	bitboard_t occupancy = board.occupancyMap();
-	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
-
+void PawnMoves(bitboard_t pawns, bitboard_t occupancy, bitboard_t enemyOccupancy,
+			   player_t player, std::vector<move_t>& moves) {
 	bitboard_t startRank = player == player_t::white ? RANK_2_MASK : RANK_7_MASK;
 	bitboard_t promotionRank = player == player_t::white ? RANK_8_MASK : RANK_1_MASK;
 
@@ -63,10 +62,7 @@ void PawnMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 	addMoves(kingsideCapture, -(8 + sign) * sign, moves);
 }
 
-void KnightMoves(const board_t& board, player_t player, std::vector<move_t>& moves) {
-	bitboard_t knights = board.getBitboard(player, piece_t::knight);
-	bitboard_t playerOccupancy = board.occupancyMap(player);
-
+void KnightMoves(bitboard_t knights, bitboard_t playerOccupancy, std::vector<move_t>& moves) {
 	// left-front, front-left, front-right, right-front, etc.
 	bitboard_t lf = shift(knights & ~FILE_A_MASK & ~FILE_B_MASK, 6) & ~playerOccupancy;
 	addMoves(lf, -6, moves);
@@ -86,11 +82,8 @@ void KnightMoves(const board_t& board, player_t player, std::vector<move_t>& mov
 	addMoves(rb, 6, moves);
 }
 
-void BishopMoves(const board_t& board, player_t player, std::vector<move_t>& moves) {
-	bitboard_t bishops = board.getBitboard(player, piece_t::bishop);
-	bitboard_t playerOccupancy = board.occupancyMap(player);
-	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
-
+void BishopMoves(bitboard_t bishops, bitboard_t playerOccupancy, bitboard_t enemyOccupancy,
+				 std::vector<move_t>& moves) {
 	bitboard_t bb = bishops;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb & ~FILE_A_MASK, 7) & ~playerOccupancy;
@@ -118,6 +111,43 @@ void BishopMoves(const board_t& board, player_t player, std::vector<move_t>& mov
 		addMoves(bb, 7 * i, moves);
 		bb &= ~enemyOccupancy;
 	}
+}
+
+void RookMoves(bitboard_t rooks, bitboard_t playerOccupancy, bitboard_t enemyOccupancy,
+			   std::vector<move_t>& moves) {
+	bitboard_t bb = rooks;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb, 8) & ~playerOccupancy;
+		addMoves(bb, -8 * i, moves);
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = rooks;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb & ~FILE_H_MASK, 1) & ~playerOccupancy;
+		addMoves(bb, -1 * i, moves);
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = rooks;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb, -8) & ~playerOccupancy;
+		addMoves(bb, 8 * i, moves);
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = rooks;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb & ~FILE_A_MASK, -1) & ~playerOccupancy;
+		addMoves(bb, 1 * i, moves);
+		bb &= ~enemyOccupancy;
+	}
+}
+
+void QueenMoves(bitboard_t queens, bitboard_t playerOccupancy, bitboard_t enemyOccupancy,
+				std::vector<move_t>& moves) {
+	BishopMoves(queens, playerOccupancy, enemyOccupancy, moves);
+	RookMoves(queens, playerOccupancy, enemyOccupancy, moves);
 }
 
 } // namespace photon::util

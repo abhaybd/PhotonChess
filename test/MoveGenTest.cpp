@@ -1,3 +1,4 @@
+#include "../src/moves.h"
 #include "photon/core.h"
 #include "photon/util.h"
 
@@ -19,7 +20,8 @@ TEST_CASE("Test PawnMoves on default board", "[util][moves]") {
 	board_t board = DefaultBoard();
 
 	std::vector<move_t> whiteMoves;
-	PawnMoves(board, player_t::white, whiteMoves);
+	PawnMoves(board.getBitboard(player_t::white, piece_t::pawn), board.occupancyMap(),
+			  board.occupancyMap(player_t::black), player_t::white, whiteMoves);
 	REQUIRE(whiteMoves.size() == 16);
 	for (uint8_t i = 8; i < 16; ++i) {
 		move_t move1 = {i, static_cast<uint8_t>(i + 8)};
@@ -29,7 +31,8 @@ TEST_CASE("Test PawnMoves on default board", "[util][moves]") {
 	}
 
 	std::vector<move_t> blackMoves;
-	PawnMoves(board, player_t::black, blackMoves);
+	PawnMoves(board.getBitboard(player_t::black, piece_t::pawn), board.occupancyMap(),
+			  board.occupancyMap(player_t::white), player_t::black, blackMoves);
 	REQUIRE(blackMoves.size() == 16);
 	for (uint8_t i = 48; i < 56; ++i) {
 		move_t move1 = {i, static_cast<uint8_t>(i - 8)};
@@ -45,7 +48,8 @@ TEST_CASE("Test PawnMoves with capturing", "[util][moves]") {
 	board.getBitboard(player_t::black, piece_t::pawn) >>= 16;
 
 	std::vector<move_t> whiteMoves;
-	PawnMoves(board, player_t::white, whiteMoves);
+	PawnMoves(board.getBitboard(player_t::white, piece_t::pawn), board.occupancyMap(),
+			  board.occupancyMap(player_t::black), player_t::white, whiteMoves);
 	REQUIRE(whiteMoves.size() == 14);
 	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "a4xb5")));
 	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "h4xg5")));
@@ -57,7 +61,8 @@ TEST_CASE("Test PawnMoves with capturing", "[util][moves]") {
 	}
 
 	std::vector<move_t> blackMoves;
-	PawnMoves(board, player_t::black, blackMoves);
+	PawnMoves(board.getBitboard(player_t::black, piece_t::pawn), board.occupancyMap(),
+			  board.occupancyMap(player_t::white), player_t::black, blackMoves);
 	REQUIRE(blackMoves.size() == 14);
 	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "a5xb4")));
 	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "h5xg4")));
@@ -73,7 +78,8 @@ TEST_CASE("Test KnightMoves", "[util][moves]") {
 	board_t board = DefaultBoard();
 
 	std::vector<move_t> whiteMoves;
-	KnightMoves(board, player_t::white, whiteMoves);
+	KnightMoves(board.getBitboard(player_t::white, piece_t::knight),
+				board.occupancyMap(player_t::white), whiteMoves);
 	REQUIRE(whiteMoves.size() == 4);
 	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Nb1-a3")));
 	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Nb1-c3")));
@@ -81,7 +87,8 @@ TEST_CASE("Test KnightMoves", "[util][moves]") {
 	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Ng1-h3")));
 
 	std::vector<move_t> blackMoves;
-	KnightMoves(board, player_t::black, blackMoves);
+	KnightMoves(board.getBitboard(player_t::black, piece_t::knight),
+				board.occupancyMap(player_t::black), blackMoves);
 	REQUIRE(blackMoves.size() == 4);
 	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Nb8-a6")));
 	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Nb8-c6")));
@@ -94,19 +101,27 @@ TEST_CASE("Test BishopMoves", "[util][moves]") {
 		board_t board = DefaultBoard();
 
 		std::vector<move_t> whiteMoves;
-		BishopMoves(board, player_t::white, whiteMoves);
+		BishopMoves(board.getBitboard(player_t::white, piece_t::bishop),
+					board.occupancyMap(player_t::white), board.occupancyMap(player_t::black),
+					whiteMoves);
 		REQUIRE(whiteMoves.size() == 0);
 
 		std::vector<move_t> blackMoves;
-		BishopMoves(board, player_t::black, blackMoves);
+		BishopMoves(board.getBitboard(player_t::black, piece_t::bishop),
+					board.occupancyMap(player_t::black), board.occupancyMap(player_t::white),
+					blackMoves);
 		REQUIRE(blackMoves.size() == 0);
 	}
 
 	SECTION("Test has moves") {
-		board_t board = MakeBoard("rnbqk1nr/pppp1ppp/8/2b1p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1");
+		board_t board =
+			MakeBoard("rnbqk1nr/pppp1ppp/8/2b1p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1");
+		bitboard_t whiteMap = board.occupancyMap(player_t::white);
+		bitboard_t blackMap = board.occupancyMap(player_t::black);
 
 		std::vector<move_t> whiteMoves;
-		BishopMoves(board, player_t::white, whiteMoves);
+		BishopMoves(board.getBitboard(player_t::white, piece_t::bishop), whiteMap, blackMap,
+					whiteMoves);
 		REQUIRE(whiteMoves.size() == 9);
 		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-b3")));
 		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-d5")));
@@ -119,7 +134,8 @@ TEST_CASE("Test BishopMoves", "[util][moves]") {
 		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-f1")));
 
 		std::vector<move_t> blackMoves;
-		BishopMoves(board, player_t::black, blackMoves);
+		BishopMoves(board.getBitboard(player_t::black, piece_t::bishop), blackMap, whiteMap,
+					blackMoves);
 		REQUIRE(blackMoves.size() == 9);
 		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-b6")));
 		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-d4")));
@@ -130,5 +146,85 @@ TEST_CASE("Test BishopMoves", "[util][moves]") {
 		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-d6")));
 		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-e7")));
 		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-f8")));
+	}
+}
+
+TEST_CASE("Test RookMoves", "[util][moves]") {
+	board_t board = MakeBoard("1nbqkbnr/1ppppppp/3r4/p7/7P/4R3/PPPPPPP1/RNBQKBN1 w Qk - 0 1");
+	bitboard_t whiteMap = board.occupancyMap(player_t::white);
+	bitboard_t blackMap = board.occupancyMap(player_t::black);
+
+	std::vector<move_t> whiteMoves;
+	RookMoves(board.getBitboard(player_t::white, piece_t::rook), whiteMap, blackMap,
+			  whiteMoves);
+	REQUIRE(whiteMoves.size() == 11);
+	uint8_t from = ParseSquare("e3");
+	for (uint8_t to = ParseSquare("a3"); to <= ParseSquare("h3"); to++) {
+		if (to == from) {
+			continue;
+		}
+		INFO("to: " << SquareToString(to));
+		REQUIRE(contains(whiteMoves, move_t{from, to}));
+	}
+	for (uint8_t to = ParseSquare("e4"); to <= ParseSquare("e7"); to += 8) {
+		INFO("to: " << SquareToString(to));
+		REQUIRE(contains(whiteMoves, move_t{from, to}));
+	}
+
+	std::vector<move_t> blackMoves;
+	RookMoves(board.getBitboard(player_t::black, piece_t::rook), blackMap, whiteMap,
+			  blackMoves);
+	REQUIRE(blackMoves.size() == 11);
+	from = ParseSquare("d6");
+	for (uint8_t to = ParseSquare("a6"); to <= ParseSquare("h6"); to++) {
+		if (to == from) {
+			continue;
+		}
+		INFO("to: " << SquareToString(to));
+		REQUIRE(contains(blackMoves, move_t{from, to}));
+	}
+	for (uint8_t to = ParseSquare("d2"); to <= ParseSquare("d5"); to += 8) {
+		INFO("to: " << SquareToString(to));
+		REQUIRE(contains(blackMoves, move_t{from, to}));
+	}
+}
+
+TEST_CASE("Test QueenMoves", "[util][moves]") {
+	board_t board = MakeBoard("r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1");
+	bitboard_t whiteMap = board.occupancyMap(player_t::white);
+	bitboard_t blackMap = board.occupancyMap(player_t::black);
+
+	std::vector<move_t> whiteMoves;
+	QueenMoves(board.getBitboard(player_t::white, piece_t::queen), whiteMap, blackMap,
+			   whiteMoves);
+	REQUIRE(whiteMoves.size() == 15);
+	uint8_t from = ParseSquare("f3");
+	for (uint8_t to = ParseSquare("a3"); to <= ParseSquare("h3"); to++) {
+		if (to == from) {
+			continue;
+		}
+		INFO("to: " << SquareToString(to));
+		REQUIRE(contains(whiteMoves, move_t{from, to}));
+	}
+	for (uint8_t to = ParseSquare("f4"); to <= ParseSquare("f7"); to += 8) {
+		INFO("to: " << SquareToString(to));
+		REQUIRE(contains(whiteMoves, move_t{from, to}));
+	}
+	for (uint8_t to = ParseSquare("d1"); to <= ParseSquare("h5"); to += 9) {
+		if (to == from) {
+			continue;
+		}
+		INFO("to: " << SquareToString(to));
+		REQUIRE(contains(whiteMoves, move_t{from, to}));
+	}
+
+	std::vector<move_t> blackMoves;
+	QueenMoves(board.getBitboard(player_t::black, piece_t::queen), blackMap, whiteMap,
+			   blackMoves);
+	REQUIRE(blackMoves.size() == 4);
+	from = ParseSquare("d8");
+	for (uint8_t to = ParseSquare("h4"); to <= ParseSquare("e7"); to += 7) {
+		INFO("to: " << SquareToString(to));
+		REQUIRE(contains(blackMoves, move_t{from, to}));
 	}
 }

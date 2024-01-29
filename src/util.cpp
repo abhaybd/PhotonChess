@@ -62,4 +62,13 @@ uint8_t ParseSquare(std::string_view s) {
 	return row * 8 + col;
 }
 
+std::string SquareToString(uint8_t square) {
+	int row = square / 8;
+	int col = square % 8;
+	std::string s;
+	s.push_back('a' + col);
+	s.push_back('1' + row);
+	return s;
+}
+
 } // namespace photon::util
