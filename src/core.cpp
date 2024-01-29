@@ -230,7 +230,7 @@ move_t MakeMove(player_t player, std::string_view longNotation) {
 			move.to = ParseSquare("c8");
 		}
 	} else {
-		// TODO: add promotion
+		// TODO: handle promotion, handle additional marks like checks, checkmates, etc.
 		CHECK_F(longNotation.length() == 5 || longNotation.length() == 6,
 				"Invalid format for long notation: %.*s",
 				static_cast<int>(longNotation.length()), longNotation.data());
