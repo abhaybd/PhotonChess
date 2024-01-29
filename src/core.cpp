@@ -77,7 +77,7 @@ bitboard_t board_t::occupancyMap() const {
 }
 
 bitboard_t board_t::occupancyMap(player_t player) const {
-	int ret = 0;
+	bitboard_t ret = 0;
 	for (bitboard_t board : getBitboards(player)) {
 		ret |= board;
 	}
@@ -135,6 +135,10 @@ bool move_t::isCastle(const board_t& board, castle_t castle) const {
 
 	int toCol = to % 8;
 	return castle == castle_t::king ? toCol == 6 : toCol == 2;
+}
+
+bool move_t::operator==(const move_t& other) const {
+	return from == other.from && to == other.to;
 }
 
 board_t MakeBoard(std::string_view fen) {
@@ -213,6 +217,7 @@ move_t MakeMove(player_t player, std::string_view longNotation) {
 			move.to = ParseSquare("c8");
 		}
 	} else {
+		// TODO: add promotion
 		CHECK_F(longNotation.length() == 5 || longNotation.length() == 6,
 				"Invalid format for long notation: %.*s",
 				static_cast<int>(longNotation.length()), longNotation.data());

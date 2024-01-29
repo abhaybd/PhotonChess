@@ -32,6 +32,7 @@ add_library(chesspp_lib STATIC)
 target_sources(chesspp_lib PRIVATE
     src/core.cpp
     src/util.cpp
+    src/moves.cpp
 )
 target_include_directories(chesspp_lib PUBLIC "include")
 target_link_libraries(chesspp_lib PRIVATE loguru::loguru)
@@ -41,6 +42,7 @@ target_link_libraries(chesspp chesspp_lib)
 
 add_executable(tests
     test/CoreTest.cpp
+    test/MoveGenTest.cpp
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain

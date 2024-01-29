@@ -74,6 +74,8 @@ struct move_t {
 	player_t getPlayer(const board_t& board) const;
 	bool isCastle(const board_t& board) const;
 	bool isCastle(const board_t& board, castle_t castle) const;
+
+	bool operator==(const move_t& other) const;
 };
 
 board_t MakeBoard(std::string_view fen);

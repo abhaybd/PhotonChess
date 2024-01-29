@@ -36,7 +36,7 @@ TEST_CASE("Test board factory functions", "[core]") {
 	REQUIRE(board.fullmove == 1);
 }
 
-TEST_CASE("Test string parsing and serialization") {
+TEST_CASE("Test string parsing and serialization", "[core]") {
 	SECTION("Test ParseSquare") {
 		REQUIRE(ParseSquare("a1") == 0);
 		REQUIRE(ParseSquare("e7") == 52);
@@ -66,4 +66,15 @@ TEST_CASE("Test string parsing and serialization") {
 		REQUIRE(move2.from == ParseSquare("e7"));
 		REQUIRE(move2.to == ParseSquare("e5"));
 	}
+}
+
+TEST_CASE("Test occupancy map", "[core]") {
+    board_t board = DefaultBoard();
+    bitboard_t occupancy = board.occupancyMap();
+    bitboard_t white = board.occupancyMap(player_t::white);
+    bitboard_t black = board.occupancyMap(player_t::black);
+
+    REQUIRE(white == 0xFFFF);
+    REQUIRE(black == 0xFFFF000000000000);
+    REQUIRE(occupancy == 0xFFFF00000000FFFF);
 }
