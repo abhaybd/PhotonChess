@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(ChessPP
+project(PhotonChess
         VERSION 1.0.0
         DESCRIPTION "Chess engine written in C++, built for easy integration."
         HOMEPAGE_URL "https://github.com/abhaybd/chesspp")
@@ -28,17 +28,18 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_library(chesspp_lib STATIC)
-target_sources(chesspp_lib PRIVATE
+add_library(photon_core STATIC)
+add_library(Photon::Core ALIAS photon_core)
+target_sources(photon_core PRIVATE
     src/core.cpp
     src/util.cpp
     src/moves.cpp
 )
-target_include_directories(chesspp_lib PUBLIC "include")
-target_link_libraries(chesspp_lib PRIVATE loguru::loguru)
+target_include_directories(photon_core PUBLIC "include")
+target_link_libraries(photon_core PRIVATE loguru::loguru)
 
-add_executable(chesspp src/main.cpp)
-target_link_libraries(chesspp chesspp_lib)
+add_executable(photon src/main.cpp)
+target_link_libraries(photon photon_core)
 
 add_executable(tests
     test/CoreTest.cpp
@@ -46,6 +47,6 @@ add_executable(tests
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain
-    chesspp_lib
+    photon_core
 )
 target_include_directories(tests PRIVATE "include")

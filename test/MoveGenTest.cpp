@@ -1,10 +1,10 @@
-#include "chesspp/core.h"
-#include "chesspp/util.h"
+#include "photon/core.h"
+#include "photon/util.h"
 
 #include <catch2/catch.hpp>
 
-using namespace chesspp;
-using namespace chesspp::util;
+using namespace photon;
+using namespace photon::util;
 
 
 TEST_CASE("Test PawnMoves on default board", "[util][moves]") {

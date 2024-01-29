@@ -1,12 +1,12 @@
 #define CATCH_CONFIG_MAIN
-#include "chesspp/core.h"
+#include "photon/core.h"
 
-#include "chesspp/util.h"
+#include "photon/util.h"
 
 #include <catch2/catch.hpp>
 
-using namespace chesspp;
-using namespace chesspp::util;
+using namespace photon;
+using namespace photon::util;
 
 TEST_CASE("Test board factory functions", "[core]") {
 	board_t board = DefaultBoard();

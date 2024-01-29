@@ -1,11 +1,11 @@
 #pragma once
 
-#include "chesspp/core.h"
+#include "photon/core.h"
 
-namespace chesspp {
+namespace photon {
 
 float EvalBoard(const board_t& board);
 
 move_t FindMove(const board_t& board, player_t player, uint depth);
 
-} // namespace chesspp
+} // namespace photon

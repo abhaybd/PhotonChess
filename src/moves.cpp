@@ -1,9 +1,9 @@
-#include "chesspp/util.h"
+#include "photon/util.h"
 
 #include <assert.h>
 #include <strings.h>
 
-namespace chesspp::util {
+namespace photon::util {
 namespace {
 
 constexpr bitboard_t FILE_A_MASK = 0x0101010101010101L;
@@ -81,4 +81,4 @@ void PawnMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 	}
 }
 
-} // namespace chesspp::util
+} // namespace photon::util

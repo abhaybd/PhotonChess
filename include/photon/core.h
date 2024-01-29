@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-namespace chesspp {
+namespace photon {
 
 // i-th bit corresponds to i-th square: a1, b1, ..., g8, h8
 using bitboard_t = uint64_t;
@@ -82,4 +82,4 @@ board_t MakeBoard(std::string_view fen);
 board_t DefaultBoard();
 move_t MakeMove(player_t player, std::string_view longNotation);
 
-} // namespace chesspp
+} // namespace photon

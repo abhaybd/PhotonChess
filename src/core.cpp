@@ -1,13 +1,13 @@
-#include "chesspp/core.h"
-#include "chesspp/util.h"
+#include "photon/core.h"
+#include "photon/util.h"
 
 #include <assert.h>
 #include <charconv>
 #include <loguru.hpp>
 
-using namespace chesspp::util;
+using namespace photon::util;
 
-namespace chesspp {
+namespace photon {
 
 namespace {
 
@@ -231,4 +231,4 @@ move_t MakeMove(player_t player, std::string_view longNotation) {
 	return move;
 }
 
-} // namespace chesspp
+} // namespace photon

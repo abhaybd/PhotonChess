@@ -1,10 +1,10 @@
 #pragma once
 
-#include "chesspp/core.h"
+#include "photon/core.h"
 
 #include <vector>
 
-namespace chesspp::util {
+namespace photon::util {
 
 player_t OtherPlayer(player_t player);
 bool CheckOccupancy(bitboard_t bitboard, int idx);
@@ -21,4 +21,4 @@ void RookMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 void QueenMoves(const board_t& board, player_t player, std::vector<move_t>& moves);
 void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves);
 
-} // namespace chesspp::util
+} // namespace photon::util

@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "chesspp/core.h"
+#include "photon/core.h"
 
 int main() {
-    std::cout << sizeof(chesspp::board_t) << std::endl;
+    std::cout << sizeof(photon::board_t) << std::endl;
 }

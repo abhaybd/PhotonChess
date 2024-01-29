@@ -1,8 +1,8 @@
-#include "chesspp/util.h"
+#include "photon/util.h"
 
 #include <loguru.hpp>
 
-namespace chesspp::util {
+namespace photon::util {
 
 player_t OtherPlayer(player_t player) {
 	if (player == player_t::white) {
@@ -62,4 +62,4 @@ uint8_t ParseSquare(std::string_view s) {
 	return row * 8 + col;
 }
 
-} // namespace chesspp::util
+} // namespace photon::util
