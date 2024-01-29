@@ -1,4 +1,5 @@
 #include "photon/core.h"
+
 #include "photon/util.h"
 
 #include <assert.h>
@@ -13,9 +14,9 @@ namespace {
 
 std::vector<std::string_view> split(std::string_view s, char delim) {
 	std::vector<std::string_view> vec;
-	int idx = 0;
+	std::size_t idx = 0;
 	while (true) {
-		int nextIdx = s.find(delim, idx);
+		std::size_t nextIdx = s.find(delim, idx);
 		if (nextIdx != std::string_view::npos) {
 			vec.push_back(s.substr(idx, nextIdx - idx));
 			idx = nextIdx + 1;
@@ -36,7 +37,19 @@ const std::array<bitboard_t, 6>& board_t::getBitboards(player_t player) const {
 		case player_t::black:
 			return black;
 		default:
-			assert(false);
+			CHECK_F(false);
+	}
+}
+
+bitboard_t& board_t::getBitboard(player_t player, piece_t piece) {
+	int idx = static_cast<int>(piece);
+	switch (player) {
+		case player_t::white:
+			return white[idx];
+		case player_t::black:
+			return black[idx];
+		default:
+			CHECK_F(false);
 	}
 }
 
@@ -160,7 +173,7 @@ board_t MakeBoard(std::string_view fen) {
 
 				auto& arr = isWhite ? board.white : board.black;
 				piece_t p = CharToPiece(c);
-				arr[static_cast<int>(p)] |= 1L << squareIdx;
+				arr[static_cast<int>(p)] |= 1ULL << squareIdx;
 				squareIdx++;
 			}
 		}

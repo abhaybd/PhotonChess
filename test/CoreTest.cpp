@@ -11,19 +11,19 @@ using namespace photon::util;
 TEST_CASE("Test board factory functions", "[core]") {
 	board_t board = DefaultBoard();
 
-	REQUIRE(board.getBitboard(player_t::white, piece_t::pawn) == 0b11111111L << 8);
-	REQUIRE(board.getBitboard(player_t::white, piece_t::knight) == 0b01000010L);
-	REQUIRE(board.getBitboard(player_t::white, piece_t::bishop) == 0b00100100L);
-	REQUIRE(board.getBitboard(player_t::white, piece_t::rook) == 0b10000001L);
-	REQUIRE(board.getBitboard(player_t::white, piece_t::queen) == 0b00001000L);
-	REQUIRE(board.getBitboard(player_t::white, piece_t::king) == 0b00010000L);
+	REQUIRE(board.getBitboard(player_t::white, piece_t::pawn) == 0b11111111ULL << 8);
+	REQUIRE(board.getBitboard(player_t::white, piece_t::knight) == 0b01000010ULL);
+	REQUIRE(board.getBitboard(player_t::white, piece_t::bishop) == 0b00100100ULL);
+	REQUIRE(board.getBitboard(player_t::white, piece_t::rook) == 0b10000001ULL);
+	REQUIRE(board.getBitboard(player_t::white, piece_t::queen) == 0b00001000ULL);
+	REQUIRE(board.getBitboard(player_t::white, piece_t::king) == 0b00010000ULL);
 
-	REQUIRE(board.getBitboard(player_t::black, piece_t::pawn) == 0b11111111L << 48);
-	REQUIRE(board.getBitboard(player_t::black, piece_t::knight) == 0b01000010L << 56);
-	REQUIRE(board.getBitboard(player_t::black, piece_t::bishop) == 0b00100100L << 56);
-	REQUIRE(board.getBitboard(player_t::black, piece_t::rook) == 0b10000001L << 56);
-	REQUIRE(board.getBitboard(player_t::black, piece_t::queen) == 0b00001000L << 56);
-	REQUIRE(board.getBitboard(player_t::black, piece_t::king) == 0b00010000L << 56);
+	REQUIRE(board.getBitboard(player_t::black, piece_t::pawn) == 0b11111111ULL << 48);
+	REQUIRE(board.getBitboard(player_t::black, piece_t::knight) == 0b01000010ULL << 56);
+	REQUIRE(board.getBitboard(player_t::black, piece_t::bishop) == 0b00100100ULL << 56);
+	REQUIRE(board.getBitboard(player_t::black, piece_t::rook) == 0b10000001ULL << 56);
+	REQUIRE(board.getBitboard(player_t::black, piece_t::queen) == 0b00001000ULL << 56);
+	REQUIRE(board.getBitboard(player_t::black, piece_t::king) == 0b00010000ULL << 56);
 
 	REQUIRE(board.hasCastlingRights(player_t::white, castle_t::king));
 	REQUIRE(board.hasCastlingRights(player_t::white, castle_t::queen));

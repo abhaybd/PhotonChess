@@ -55,6 +55,7 @@ struct board_t {
 	int fullmove;
 
 	const std::array<bitboard_t, 6>& getBitboards(player_t player) const;
+	bitboard_t& getBitboard(player_t player, piece_t piece);
 	bitboard_t getBitboard(player_t player, piece_t piece) const;
 	std::string fen() const;
 	bool hasCastlingRights(player_t player, castle_t castle) const;

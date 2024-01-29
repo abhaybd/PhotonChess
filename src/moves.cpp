@@ -6,12 +6,12 @@
 namespace photon::util {
 namespace {
 
-constexpr bitboard_t FILE_A_MASK = 0x0101010101010101L;
-constexpr bitboard_t FILE_H_MASK = 0x8080808080808080L;
-constexpr bitboard_t RANK_1_MASK = 0x00000000000000FFL;
-constexpr bitboard_t RANK_2_MASK = 0x000000000000FF00L;
-constexpr bitboard_t RANK_7_MASK = 0x00FF000000000000L;
-constexpr bitboard_t RANK_8_MASK = 0xFF00000000000000L;
+constexpr bitboard_t FILE_A_MASK = 0x0101010101010101ULL;
+constexpr bitboard_t FILE_H_MASK = 0x8080808080808080ULL;
+constexpr bitboard_t RANK_1_MASK = 0x00000000000000FFULL;
+constexpr bitboard_t RANK_2_MASK = 0x000000000000FF00ULL;
+constexpr bitboard_t RANK_7_MASK = 0x00FF000000000000ULL;
+constexpr bitboard_t RANK_8_MASK = 0xFF00000000000000ULL;
 
 template <typename T>
 T shift(T x, int shift) {
@@ -50,7 +50,7 @@ void PawnMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 		uint8_t from = idx - 8 * sign;
 		uint8_t to = idx;
 		moves.push_back({from, to});
-		forward1 &= ~(1L << idx);
+		forward1 &= ~(1ULL << idx);
 	}
 
 	while (forward2 != 0) {
@@ -59,7 +59,7 @@ void PawnMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 		uint8_t from = idx - 16 * sign;
 		uint8_t to = idx;
 		moves.push_back({from, to});
-		forward2 &= ~(1L << idx);
+		forward2 &= ~(1ULL << idx);
 	}
 
 	while (queensideCapture != 0) {
@@ -68,7 +68,7 @@ void PawnMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 		uint8_t from = idx - (8 - sign) * sign;
 		uint8_t to = idx;
 		moves.push_back({from, to});
-		queensideCapture &= ~(1L << idx);
+		queensideCapture &= ~(1ULL << idx);
 	}
 
 	while (kingsideCapture != 0) {
@@ -77,7 +77,7 @@ void PawnMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 		uint8_t from = idx - (8 + sign) * sign;
 		uint8_t to = idx;
 		moves.push_back({from, to});
-		kingsideCapture &= ~(1L << idx);
+		kingsideCapture &= ~(1ULL << idx);
 	}
 }
 

@@ -4,6 +4,14 @@ project(PhotonChess
         DESCRIPTION "Chess engine written in C++, built for easy integration."
         HOMEPAGE_URL "https://github.com/abhaybd/chesspp")
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 include(GNUInstallDirs)
 Include(FetchContent)
 
