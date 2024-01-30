@@ -13,7 +13,7 @@ player_t OtherPlayer(player_t player) {
 }
 
 bool CheckOccupancy(bitboard_t bitboard, int idx) {
-	return (bitboard & (1 << idx)) != 0;
+	return (bitboard & (1ULL << idx)) != 0;
 }
 
 char PieceToChar(piece_t piece) {

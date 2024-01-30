@@ -18,6 +18,11 @@ constexpr bitboard_t RANK_2_MASK = 0x000000000000FF00ULL;
 constexpr bitboard_t RANK_7_MASK = 0x00FF000000000000ULL;
 constexpr bitboard_t RANK_8_MASK = 0xFF00000000000000ULL;
 
+constexpr bitboard_t CASTLE_K_MASK_W = 0b01100000ULL;
+constexpr bitboard_t CASTLE_K_MASK_B = CASTLE_K_MASK_W << 56;
+constexpr bitboard_t CASTLE_Q_MASK_W = 0b00001110ULL;
+constexpr bitboard_t CASTLE_Q_MASK_B = CASTLE_Q_MASK_W << 56;
+
 template <typename T>
 T shift(T x, int shift) {
 	if (shift >= 0) {
@@ -37,6 +42,11 @@ void addMoves(bitboard_t bb, int offset, std::vector<move_t>& moves) {
 		bb &= ~(1ULL << idx);
 	}
 }
+
+uint8_t operator""_uc(unsigned long long int x) {
+	return static_cast<uint8_t>(x);
+}
+
 } // namespace
 
 void PawnMoves(bitboard_t pawns, bitboard_t occupancy, bitboard_t enemyOccupancy,
@@ -148,6 +158,37 @@ void QueenMoves(bitboard_t queens, bitboard_t playerOccupancy, bitboard_t enemyO
 				std::vector<move_t>& moves) {
 	BishopMoves(queens, playerOccupancy, enemyOccupancy, moves);
 	RookMoves(queens, playerOccupancy, enemyOccupancy, moves);
+}
+
+void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves) {
+	bitboard_t king = board.getBitboard(player, piece_t::king);
+	bitboard_t playerOccupancy = board.occupancyMap(player);
+	assert(king != 0 && king == (king & -king)); // only one king
+	addMoves(shift(king, 8) & ~playerOccupancy, -8, moves);
+	addMoves(shift(king, -8) & ~playerOccupancy, 8, moves);
+	addMoves(shift(king & ~FILE_A_MASK, 7) & ~playerOccupancy, -7, moves);
+	addMoves(shift(king & ~FILE_H_MASK, 9) & ~playerOccupancy, -9, moves);
+	addMoves(shift(king & ~FILE_H_MASK, 1) & ~playerOccupancy, -1, moves);
+	addMoves(shift(king & ~FILE_A_MASK, -1) & ~playerOccupancy, 1, moves);
+	addMoves(shift(king & ~FILE_H_MASK, -7) & ~playerOccupancy, 7, moves);
+	addMoves(shift(king & ~FILE_A_MASK, -9) & ~playerOccupancy, 9, moves);
+
+	uint8_t from = ffsll(king) - 1;
+	bitboard_t occupancy = board.occupancyMap();
+	bitboard_t castleKMask = player == player_t::white ? CASTLE_K_MASK_W : CASTLE_K_MASK_B;
+	bitboard_t castleQMask = player == player_t::white ? CASTLE_Q_MASK_W : CASTLE_Q_MASK_B;
+	if (board.hasCastlingRights(player, castle_t::king) && (occupancy & castleKMask) == 0) {
+		assert(from == (player == player_t::white ? 4 : 60));
+		assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
+							  player == player_t::white ? 7 : 63));
+		moves.push_back(move_t{from, player == player_t::white ? 6_uc : 62_uc});
+	}
+	if (board.hasCastlingRights(player, castle_t::queen) && (occupancy & castleQMask) == 0) {
+		assert(from == (player == player_t::white ? 4 : 60));
+		assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
+							  player == player_t::white ? 0 : 56));
+		moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
+	}
 }
 
 } // namespace photon::util

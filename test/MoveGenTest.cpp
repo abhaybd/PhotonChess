@@ -190,7 +190,8 @@ TEST_CASE("Test RookMoves", "[util][moves]") {
 }
 
 TEST_CASE("Test QueenMoves", "[util][moves]") {
-	board_t board = MakeBoard("r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1");
+	board_t board =
+		MakeBoard("r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1");
 	bitboard_t whiteMap = board.occupancyMap(player_t::white);
 	bitboard_t blackMap = board.occupancyMap(player_t::black);
 
@@ -227,4 +228,22 @@ TEST_CASE("Test QueenMoves", "[util][moves]") {
 		INFO("to: " << SquareToString(to));
 		REQUIRE(contains(blackMoves, move_t{from, to}));
 	}
+}
+
+TEST_CASE("Test KingMoves", "[util][moves]") {
+	board_t board = MakeBoard("r3kbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQK2R w KQkq e6 0 1");
+
+	std::vector<move_t> whiteMoves;
+	KingMoves(board, player_t::white, whiteMoves);
+	REQUIRE(whiteMoves.size() == 3);
+	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Ke1-f1")));
+	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Ke1-e2")));
+	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "O-O")));
+
+	std::vector<move_t> blackMoves;
+	KingMoves(board, player_t::black, blackMoves);
+	REQUIRE(blackMoves.size() == 3);
+	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Ke8-d8")));
+	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Ke8-e7")));
+	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "O-O-O")));
 }
