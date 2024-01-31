@@ -69,12 +69,43 @@ TEST_CASE("Test string parsing and serialization", "[core]") {
 }
 
 TEST_CASE("Test occupancy map", "[core]") {
-    board_t board = DefaultBoard();
-    bitboard_t occupancy = board.occupancyMap();
-    bitboard_t white = board.occupancyMap(player_t::white);
-    bitboard_t black = board.occupancyMap(player_t::black);
+	board_t board = DefaultBoard();
+	bitboard_t occupancy = board.occupancyMap();
+	bitboard_t white = board.occupancyMap(player_t::white);
+	bitboard_t black = board.occupancyMap(player_t::black);
 
-    REQUIRE(white == 0xFFFF);
-    REQUIRE(black == 0xFFFF000000000000);
-    REQUIRE(occupancy == 0xFFFF00000000FFFF);
+	REQUIRE(white == 0xFFFF);
+	REQUIRE(black == 0xFFFF000000000000);
+	REQUIRE(occupancy == 0xFFFF00000000FFFF);
+}
+
+TEST_CASE("Test IsSquareAttacked", "[core]") {
+	board_t board = DefaultBoard();
+	for (int i = ParseSquare("a1"); i <= ParseSquare("h2"); i++) {
+		INFO("Square: " << SquareToString(i));
+		REQUIRE_FALSE(board.isSquareAttacked(player_t::black, i));
+	}
+
+	for (int i = ParseSquare("a3"); i <= ParseSquare("h3"); i++) {
+		INFO("Square: " << SquareToString(i));
+		REQUIRE(board.isSquareAttacked(player_t::white, i));
+		REQUIRE_FALSE(board.isSquareAttacked(player_t::black, i));
+	}
+
+	for (int i = ParseSquare("a4"); i <= ParseSquare("h5"); i++) {
+		INFO("Square: " << SquareToString(i));
+		REQUIRE_FALSE(board.isSquareAttacked(player_t::white, i));
+		REQUIRE_FALSE(board.isSquareAttacked(player_t::black, i));
+	}
+
+	for (int i = ParseSquare("a6"); i <= ParseSquare("h6"); i++) {
+		INFO("Square: " << SquareToString(i));
+		REQUIRE_FALSE(board.isSquareAttacked(player_t::white, i));
+		REQUIRE(board.isSquareAttacked(player_t::black, i));
+	}
+
+	for (int i = ParseSquare("a8"); i <= ParseSquare("h8"); i++) {
+		INFO("Square: " << SquareToString(i));
+		REQUIRE_FALSE(board.isSquareAttacked(player_t::white, i));
+	}
 }

@@ -3,6 +3,7 @@
 #include "photon/util.h"
 
 #include <assert.h>
+#include <loguru.hpp>
 #include <strings.h>
 
 namespace photon::util {
@@ -48,6 +49,35 @@ uint8_t operator""_uc(unsigned long long int x) {
 }
 
 } // namespace
+
+void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move_t>& moves) {
+	switch (piece) {
+		case piece_t::pawn:
+			PawnMoves(board.getBitboard(player, piece), board.occupancyMap(),
+					  board.occupancyMap(OtherPlayer(player)), player, moves);
+			break;
+		case piece_t::knight:
+			KnightMoves(board.getBitboard(player, piece), board.occupancyMap(player), moves);
+			break;
+		case piece_t::bishop:
+			BishopMoves(board.getBitboard(player, piece), board.occupancyMap(player),
+						board.occupancyMap(OtherPlayer(player)), moves);
+			break;
+		case piece_t::rook:
+			RookMoves(board.getBitboard(player, piece), board.occupancyMap(player),
+					  board.occupancyMap(OtherPlayer(player)), moves);
+			break;
+		case piece_t::queen:
+			QueenMoves(board.getBitboard(player, piece), board.occupancyMap(player),
+					   board.occupancyMap(OtherPlayer(player)), moves);
+			break;
+		case piece_t::king:
+			KingMoves(board, player, moves);
+			break;
+		default:
+			CHECK_F(false);
+	}
+}
 
 void PawnMoves(bitboard_t pawns, bitboard_t occupancy, bitboard_t enemyOccupancy,
 			   player_t player, std::vector<move_t>& moves) {
@@ -189,6 +219,131 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 							  player == player_t::white ? 0 : 56));
 		moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
 	}
+}
+
+bitboard_t PieceAttackMoves(piece_t piece, bitboard_t pieceMask, player_t player, bitboard_t playerOccupancy, bitboard_t enemyOccupancy) {
+	switch (piece) {
+		case piece_t::pawn:
+			return PawnAttackMask(pieceMask, enemyOccupancy, player);
+		case piece_t::knight:
+			return KnightAttackMask(pieceMask, playerOccupancy);
+		case piece_t::bishop:
+			return BishopAttackMask(pieceMask, playerOccupancy, enemyOccupancy);
+		case piece_t::rook:
+			return RookAttackMask(pieceMask, playerOccupancy, enemyOccupancy);
+		case piece_t::queen:
+			return QueenAttackMask(pieceMask, playerOccupancy, enemyOccupancy);
+		case piece_t::king:
+			return KingAttackMask(pieceMask, playerOccupancy);
+		default:
+			CHECK_F(false);
+	}
+}
+
+bitboard_t PawnAttackMask(bitboard_t pawns, bitboard_t enemyOccupancy, player_t player) {
+	int sign = player == player_t::white ? 1 : -1;
+	bitboard_t queensideCapture =
+		shift(pawns & ~FILE_A_MASK, (8 - sign) * sign) & enemyOccupancy;
+	bitboard_t kingsideCapture =
+		shift(pawns & ~FILE_H_MASK, (8 + sign) * sign) & enemyOccupancy;
+	return queensideCapture | kingsideCapture;
+}
+
+bitboard_t KnightAttackMask(bitboard_t knights, bitboard_t playerOccupancy) {
+	bitboard_t lf = shift(knights & ~FILE_A_MASK & ~FILE_B_MASK, 6) & ~playerOccupancy;
+	bitboard_t fl = shift(knights & ~FILE_A_MASK, 15) & ~playerOccupancy;
+	bitboard_t fr = shift(knights & ~FILE_H_MASK, 17) & ~playerOccupancy;
+	bitboard_t rf = shift(knights & ~FILE_H_MASK & ~FILE_G_MASK, 10) & ~playerOccupancy;
+	bitboard_t lb = shift(knights & ~FILE_A_MASK & ~FILE_B_MASK, -10) & ~playerOccupancy;
+	bitboard_t bl = shift(knights & ~FILE_A_MASK, -17) & ~playerOccupancy;
+	bitboard_t br = shift(knights & ~FILE_H_MASK, -15) & ~playerOccupancy;
+	bitboard_t rb = shift(knights & ~FILE_H_MASK & ~FILE_G_MASK, -6) & ~playerOccupancy;
+	return lf | fl | fr | rf | lb | bl | br | rb;
+}
+
+bitboard_t BishopAttackMask(bitboard_t bishops, bitboard_t playerOccupancy,
+							bitboard_t enemyOccupancy) {
+	bitboard_t bb = bishops;
+	bitboard_t mask = 0;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb & ~FILE_A_MASK, 7) & ~playerOccupancy;
+		mask |= bb;
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = bishops;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb & ~FILE_H_MASK, 9) & ~playerOccupancy;
+		mask |= bb;
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = bishops;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb & ~FILE_A_MASK, -9) & ~playerOccupancy;
+		mask |= bb;
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = bishops;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb & ~FILE_H_MASK, -7) & ~playerOccupancy;
+		mask |= bb;
+		bb &= ~enemyOccupancy;
+	}
+	return mask;
+}
+
+bitboard_t RookAttackMask(bitboard_t rooks, bitboard_t playerOccupancy,
+						  bitboard_t enemyOccupancy) {
+	bitboard_t bb = rooks;
+	bitboard_t mask = 0;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb, 8) & ~playerOccupancy;
+		mask |= bb;
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = rooks;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb & ~FILE_H_MASK, 1) & ~playerOccupancy;
+		mask |= bb;
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = rooks;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb, -8) & ~playerOccupancy;
+		mask |= bb;
+		bb &= ~enemyOccupancy;
+	}
+
+	bb = rooks;
+	for (int i = 1; i < 8 && bb != 0; i++) {
+		bb = shift(bb & ~FILE_A_MASK, -1) & ~playerOccupancy;
+		mask |= bb;
+		bb &= ~enemyOccupancy;
+	}
+	return mask;
+}
+
+bitboard_t QueenAttackMask(bitboard_t queens, bitboard_t playerOccupancy,
+						   bitboard_t enemyOccupancy) {
+	return BishopAttackMask(queens, playerOccupancy, enemyOccupancy) |
+		   RookAttackMask(queens, playerOccupancy, enemyOccupancy);
+}
+
+bitboard_t KingAttackMask(bitboard_t king, bitboard_t playerOccupancy) {
+	bitboard_t mask = 0;
+	mask |= shift(king, 8) & ~playerOccupancy;
+	mask |= shift(king, -8) & ~playerOccupancy;
+	mask |= shift(king & ~FILE_A_MASK, 7) & ~playerOccupancy;
+	mask |= shift(king & ~FILE_H_MASK, 9) & ~playerOccupancy;
+	mask |= shift(king & ~FILE_H_MASK, 1) & ~playerOccupancy;
+	mask |= shift(king & ~FILE_A_MASK, -1) & ~playerOccupancy;
+	mask |= shift(king & ~FILE_H_MASK, -7) & ~playerOccupancy;
+	mask |= shift(king & ~FILE_A_MASK, -9) & ~playerOccupancy;
+	return mask;
 }
 
 } // namespace photon::util

@@ -57,13 +57,16 @@ struct board_t {
 	const std::array<bitboard_t, 6>& getBitboards(player_t player) const;
 	bitboard_t& getBitboard(player_t player, piece_t piece);
 	bitboard_t getBitboard(player_t player, piece_t piece) const;
-	std::string fen() const;
 	bool hasCastlingRights(player_t player, castle_t castle) const;
 	player_t playerToMove() const;
 	std::optional<int> availableEnPassant() const;
+
 	bitboard_t occupancyMap() const;
 	bitboard_t occupancyMap(player_t player) const;
-	std::vector<move_t> moves() const;
+
+	std::string fen() const;
+	std::vector<move_t> moves(player_t player) const;
+	bool isSquareAttacked(player_t player, uint8_t square) const;
 };
 
 struct move_t {

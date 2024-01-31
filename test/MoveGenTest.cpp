@@ -14,6 +14,15 @@ bool contains(const T& container, const typename T::value_type& value) {
 	return std::find(container.begin(), container.end(), value) != container.end();
 }
 
+int bitcount(bitboard_t b) {
+	int count = 0;
+	while (b) {
+		b &= b - 1;
+		count++;
+	}
+	return count;
+}
+
 } // namespace
 
 TEST_CASE("Test PawnMoves on default board", "[util][moves]") {
@@ -246,4 +255,80 @@ TEST_CASE("Test KingMoves", "[util][moves]") {
 	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Ke8-d8")));
 	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Ke8-e7")));
 	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "O-O-O")));
+}
+
+TEST_CASE("Test PawnAttackMask", "[util][moves]") {
+	board_t board =
+		MakeBoard("rnbqkbnr/ppp1p1pp/8/3p1p2/4P3/5P2/PPPP2PP/RNBQKBNR b KQkq - 0 1");
+
+	bitboard_t whiteAttacks =
+		PawnAttackMask(board.getBitboard(player_t::white, piece_t::pawn),
+					   board.occupancyMap(player_t::black), player_t::white);
+	REQUIRE(bitcount(whiteAttacks) == 2);
+	REQUIRE((whiteAttacks & (1ULL << ParseSquare("d5"))) != 0);
+	REQUIRE((whiteAttacks & (1ULL << ParseSquare("f5"))) != 0);
+
+	bitboard_t blackAttacks =
+		PawnAttackMask(board.getBitboard(player_t::black, piece_t::pawn),
+					   board.occupancyMap(player_t::white), player_t::black);
+	REQUIRE(bitcount(blackAttacks) == 1);
+	REQUIRE((blackAttacks & (1ULL << ParseSquare("e4"))) != 0);
+}
+
+TEST_CASE("Test KnightAttackMask", "[util][moves]") {
+	board_t board =
+		MakeBoard("r1bqkbnr/pppp1ppp/2n5/4N3/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 0 1");
+
+	bitboard_t whiteAttacks =
+		KnightAttackMask(board.getBitboard(player_t::white, piece_t::knight),
+						 board.occupancyMap(player_t::white));
+	REQUIRE(bitcount(whiteAttacks) == 10);
+	REQUIRE(whiteAttacks == ((1ULL << ParseSquare("c6")) | (1ULL << ParseSquare("d7")) |
+							 (1ULL << ParseSquare("f7")) | (1ULL << ParseSquare("g6")) |
+							 (1ULL << ParseSquare("g4")) | (1ULL << ParseSquare("f3")) |
+							 (1ULL << ParseSquare("d3")) | (1ULL << ParseSquare("c4")) |
+							 (1ULL << ParseSquare("a3")) | (1ULL << ParseSquare("c3"))));
+
+	bitboard_t blackAttacks =
+		KnightAttackMask(board.getBitboard(player_t::black, piece_t::knight),
+						 board.occupancyMap(player_t::black));
+	REQUIRE(bitcount(blackAttacks) == 8);
+	REQUIRE(blackAttacks == ((1ULL << ParseSquare("b8")) | (1ULL << ParseSquare("e7")) |
+							 (1ULL << ParseSquare("e5")) | (1ULL << ParseSquare("d4")) |
+							 (1ULL << ParseSquare("b4")) | (1ULL << ParseSquare("a5")) |
+							 (1ULL << ParseSquare("f6")) | (1ULL << ParseSquare("h6"))));
+}
+
+TEST_CASE("Test PieceAttackMasks", "[util][moves]") {
+	board_t board =
+		MakeBoard("r3k1nr/ppp2ppp/1bnpqb2/4N2Q/2B1P2P/3P2R1/PPP2PP1/RNB1K3 w - - 0 1");
+
+	for (piece_t p :
+		 {piece_t::knight, piece_t::bishop, piece_t::rook, piece_t::queen, piece_t::king}) {
+		bitboard_t whiteAttacks = PieceAttackMoves(
+			p, board.getBitboard(player_t::white, p), player_t::white,
+			board.occupancyMap(player_t::white), board.occupancyMap(player_t::black));
+		std::vector<move_t> whiteMoves;
+		PieceMoves(player_t::white, p, board, whiteMoves);
+
+		bitboard_t trueWhiteAttacks = 0;
+		for (const move_t& move : whiteMoves) {
+			trueWhiteAttacks |= 1ULL << move.to;
+		}
+
+		REQUIRE(whiteAttacks == trueWhiteAttacks);
+
+		bitboard_t blackAttacks = PieceAttackMoves(
+			p, board.getBitboard(player_t::black, p), player_t::black,
+			board.occupancyMap(player_t::black), board.occupancyMap(player_t::white));
+		std::vector<move_t> blackMoves;
+		PieceMoves(player_t::black, p, board, blackMoves);
+
+		bitboard_t trueBlackAttacks = 0;
+		for (const move_t& move : blackMoves) {
+			trueBlackAttacks |= 1ULL << move.to;
+		}
+
+		REQUIRE(blackAttacks == trueBlackAttacks);
+	}
 }

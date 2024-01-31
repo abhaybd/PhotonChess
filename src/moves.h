@@ -11,7 +11,17 @@ namespace photon::util {
  */
 
 /**
- * Generates pawn moves for a given set of pawns.
+ * @brief Generates moves for a given piece.
+ *
+ * @param player The player for whom the moves are generated.
+ * @param piece The piece for which the moves are generated.
+ * @param board The chess board.
+ * @param moves The vector to store the generated moves.
+ */
+void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move_t>& moves);
+
+/**
+ * Generates pawn moves for a given set of pawns, including en passant and promotion.
  *
  * @param pawns The bitboard representing the pawns.
  * @param occupancy The bitboard representing the occupancy of all pieces.
@@ -65,13 +75,37 @@ void QueenMoves(bitboard_t queens, bitboard_t playerOccupancy, bitboard_t enemyO
 				std::vector<move_t>& moves);
 
 /**
- * Generates king moves for a given board and player.
+ * Generates king moves for a given board and player. Does not include castling.
  *
  * @param board The chess board.
  * @param player The player for whom the moves are generated.
  * @param moves The vector to store the generated moves.
  */
 void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves);
+
+/** @} */
+
+/**
+ * @defgroup AttackMaskGenerators Functions to generate attacks for each piece type.
+ * @{
+ */
+
+bitboard_t PieceAttackMoves(piece_t piece, bitboard_t pieceMask, player_t player, bitboard_t playerOccupancy, bitboard_t enemyOccupancy);
+
+bitboard_t PawnAttackMask(bitboard_t pawns, bitboard_t enemyOccupancy, player_t player);
+
+bitboard_t KnightAttackMask(bitboard_t knights, bitboard_t playerOccupancy);
+
+bitboard_t BishopAttackMask(bitboard_t bishops, bitboard_t playerOccupancy,
+							bitboard_t enemyOccupancy);
+
+bitboard_t RookAttackMask(bitboard_t rooks, bitboard_t playerOccupancy,
+						  bitboard_t enemyOccupancy);
+
+bitboard_t QueenAttackMask(bitboard_t queens, bitboard_t playerOccupancy,
+						   bitboard_t enemyOccupancy);
+
+bitboard_t KingAttackMask(bitboard_t king, bitboard_t playerOccupancy);
 
 /** @} */
 

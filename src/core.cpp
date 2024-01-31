@@ -1,6 +1,7 @@
 #include "photon/core.h"
 
 #include "photon/util.h"
+#include "moves.h"
 
 #include <assert.h>
 #include <charconv>
@@ -97,9 +98,54 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 	return ret;
 }
 
-std::vector<move_t> board_t::moves() const {
-	// TODO: implement
-	return {};
+std::vector<move_t> board_t::moves(player_t player) const {
+	bitboard_t playerOccupancy = occupancyMap(player);
+	bitboard_t enemyOccupancy = occupancyMap(OtherPlayer(player));
+	bitboard_t occupancy = playerOccupancy | enemyOccupancy;
+
+	std::vector<move_t> moves;
+	PawnMoves(getBitboard(player, piece_t::pawn), occupancy, enemyOccupancy, player, moves);
+	KnightMoves(getBitboard(player, piece_t::knight), playerOccupancy, moves);
+	BishopMoves(getBitboard(player, piece_t::bishop), playerOccupancy, enemyOccupancy, moves);
+	RookMoves(getBitboard(player, piece_t::rook), playerOccupancy, enemyOccupancy, moves);
+	QueenMoves(getBitboard(player, piece_t::queen), playerOccupancy, enemyOccupancy, moves);
+	KingMoves(*this, player, moves);
+
+	// TODO add castling moves
+
+	// TODO Filter out moves that leave the king in check
+
+	return moves;
+}
+
+bool board_t::isSquareAttacked(player_t player, uint8_t square) const {
+	player_t otherPlayer = OtherPlayer(player);
+	bitboard_t enemyOccupancy = occupancyMap(OtherPlayer(player));
+	bitboard_t playerOccupancy = occupancyMap(player);
+
+	bitboard_t bb = 1ULL << square;
+
+	bitboard_t pawnAttacks = PawnAttackMask(bb, playerOccupancy, otherPlayer);
+	if (pawnAttacks & getBitboard(player, piece_t::pawn)) {
+		return true;
+	}
+	bitboard_t knightAttacks = KnightAttackMask(bb, enemyOccupancy);
+	if (knightAttacks & getBitboard(player, piece_t::knight)) {
+		return true;
+	}
+	bitboard_t bishopAttacks = BishopAttackMask(bb, enemyOccupancy, playerOccupancy);
+	if (bishopAttacks & (getBitboard(player, piece_t::bishop) | getBitboard(player, piece_t::queen))) {
+		return true;
+	}
+	bitboard_t rookAttacks = RookAttackMask(bb, enemyOccupancy, playerOccupancy);
+	if (rookAttacks & (getBitboard(player, piece_t::rook) | getBitboard(player, piece_t::queen))) {
+		return true;
+	}
+	bitboard_t kingAttacks = KingAttackMask(bb, enemyOccupancy);
+	if (kingAttacks & getBitboard(player, piece_t::king)) {
+		return true;
+	}
+	return false;
 }
 
 bool move_t::isCapture(const board_t& board) const {
