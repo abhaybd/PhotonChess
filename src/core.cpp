@@ -99,19 +99,7 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 }
 
 std::vector<move_t> board_t::moves(player_t player) const {
-	bitboard_t playerOccupancy = occupancyMap(player);
-	bitboard_t enemyOccupancy = occupancyMap(OtherPlayer(player));
-	bitboard_t occupancy = playerOccupancy | enemyOccupancy;
-
-	std::vector<move_t> moves;
-	PawnMoves(getBitboard(player, piece_t::pawn), occupancy, enemyOccupancy, player, moves);
-	KnightMoves(getBitboard(player, piece_t::knight), playerOccupancy, moves);
-	BishopMoves(getBitboard(player, piece_t::bishop), playerOccupancy, enemyOccupancy, moves);
-	RookMoves(getBitboard(player, piece_t::rook), playerOccupancy, enemyOccupancy, moves);
-	QueenMoves(getBitboard(player, piece_t::queen), playerOccupancy, enemyOccupancy, moves);
-	KingMoves(*this, player, moves);
-
-	// TODO add castling moves
+	std::vector<move_t> moves = GenerateMoves(*this, player);
 
 	// TODO Filter out moves that leave the king in check
 

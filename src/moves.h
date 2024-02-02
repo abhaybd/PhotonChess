@@ -11,6 +11,17 @@ namespace photon::util {
  */
 
 /**
+ * @brief Generates all possible moves for a given player.
+ *
+ * This includes castling, but does not check if the moves result in the player being in check.
+ *
+ * @param board The chess board.
+ * @param player The player for whom the moves are generated.
+ * @return std::vector<move_t> A vector of all possible moves for the given player.
+ */
+std::vector<move_t> GenerateMoves(const board_t& board, player_t player);
+
+/**
  * @brief Generates moves for a given piece.
  *
  * @param player The player for whom the moves are generated.
@@ -90,7 +101,8 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
  * @{
  */
 
-bitboard_t PieceAttackMoves(piece_t piece, bitboard_t pieceMask, player_t player, bitboard_t playerOccupancy, bitboard_t enemyOccupancy);
+bitboard_t PieceAttackMoves(piece_t piece, bitboard_t pieceMask, player_t player,
+							bitboard_t playerOccupancy, bitboard_t enemyOccupancy);
 
 bitboard_t PawnAttackMask(bitboard_t pawns, bitboard_t enemyOccupancy, player_t player);
 

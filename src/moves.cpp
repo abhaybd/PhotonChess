@@ -48,7 +48,38 @@ uint8_t operator""_uc(unsigned long long int x) {
 	return static_cast<uint8_t>(x);
 }
 
+bool IsAnyAttacked(const board_t& board, bitboard_t bb, player_t player) {
+	while (bb != 0) {
+		int idx = ffsll(bb) - 1;
+		if (board.isSquareAttacked(player, idx)) {
+			return true;
+		}
+		bb &= ~(1ULL << idx);
+	}
+	return false;
+}
+
 } // namespace
+
+std::vector<move_t> GenerateMoves(const board_t& board, player_t player) {
+	bitboard_t playerOccupancy = board.occupancyMap(player);
+	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
+	bitboard_t occupancy = playerOccupancy | enemyOccupancy;
+
+	std::vector<move_t> moves;
+	PawnMoves(board.getBitboard(player, piece_t::pawn), occupancy, enemyOccupancy, player,
+			  moves);
+	KnightMoves(board.getBitboard(player, piece_t::knight), playerOccupancy, moves);
+	BishopMoves(board.getBitboard(player, piece_t::bishop), playerOccupancy, enemyOccupancy,
+				moves);
+	RookMoves(board.getBitboard(player, piece_t::rook), playerOccupancy, enemyOccupancy,
+			  moves);
+	QueenMoves(board.getBitboard(player, piece_t::queen), playerOccupancy, enemyOccupancy,
+			   moves);
+	KingMoves(board, player, moves);
+
+	return moves;
+}
 
 void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move_t>& moves) {
 	switch (piece) {
@@ -211,17 +242,22 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 		assert(from == (player == player_t::white ? 4 : 60));
 		assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
 							  player == player_t::white ? 7 : 63));
-		moves.push_back(move_t{from, player == player_t::white ? 6_uc : 62_uc});
+		if (!IsAnyAttacked(board, castleKMask, OtherPlayer(player))) {
+			moves.push_back(move_t{from, player == player_t::white ? 6_uc : 62_uc});
+		}
 	}
 	if (board.hasCastlingRights(player, castle_t::queen) && (occupancy & castleQMask) == 0) {
 		assert(from == (player == player_t::white ? 4 : 60));
 		assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
 							  player == player_t::white ? 0 : 56));
-		moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
+		if (!IsAnyAttacked(board, castleQMask, OtherPlayer(player))) {
+			moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
+		}
 	}
 }
 
-bitboard_t PieceAttackMoves(piece_t piece, bitboard_t pieceMask, player_t player, bitboard_t playerOccupancy, bitboard_t enemyOccupancy) {
+bitboard_t PieceAttackMoves(piece_t piece, bitboard_t pieceMask, player_t player,
+							bitboard_t playerOccupancy, bitboard_t enemyOccupancy) {
 	switch (piece) {
 		case piece_t::pawn:
 			return PawnAttackMask(pieceMask, enemyOccupancy, player);
