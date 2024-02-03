@@ -30,14 +30,8 @@ enum class piece_t {
 	king = 5
 };
 
-constexpr std::array<piece_t, 6> ALL_PIECES = {
-	piece_t::pawn,
-	piece_t::knight,
-	piece_t::bishop,
-	piece_t::rook,
-	piece_t::queen,
-	piece_t::king
-};
+constexpr std::array<piece_t, 6> ALL_PIECES = {piece_t::pawn, piece_t::knight, piece_t::bishop,
+											   piece_t::rook, piece_t::queen,  piece_t::king};
 
 struct move_t;
 
@@ -95,9 +89,5 @@ struct move_t {
 
 	bool operator==(const move_t& other) const;
 };
-
-board_t MakeBoard(std::string_view fen);
-board_t DefaultBoard();
-move_t MakeMove(player_t player, std::string_view longNotation);
 
 } // namespace photon

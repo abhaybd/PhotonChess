@@ -60,8 +60,8 @@ TEST_CASE("Test PawnMoves with capturing", "[util][moves]") {
 	PawnMoves(board.getBitboard(player_t::white, piece_t::pawn), board.occupancyMap(),
 			  board.occupancyMap(player_t::black), player_t::white, whiteMoves);
 	REQUIRE(whiteMoves.size() == 14);
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "a4xb5")));
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "h4xg5")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "a4xb5")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "h4xg5")));
 	for (uint8_t i = ParseSquare("b4"); i <= ParseSquare("g4"); ++i) {
 		move_t left = {i, static_cast<uint8_t>(i + 7)};
 		move_t right = {i, static_cast<uint8_t>(i + 9)};
@@ -73,8 +73,8 @@ TEST_CASE("Test PawnMoves with capturing", "[util][moves]") {
 	PawnMoves(board.getBitboard(player_t::black, piece_t::pawn), board.occupancyMap(),
 			  board.occupancyMap(player_t::white), player_t::black, blackMoves);
 	REQUIRE(blackMoves.size() == 14);
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "a5xb4")));
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "h5xg4")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "a5xb4")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "h5xg4")));
 	for (uint8_t i = ParseSquare("b5"); i <= ParseSquare("g5"); ++i) {
 		move_t left = {i, static_cast<uint8_t>(i - 7)};
 		move_t right = {i, static_cast<uint8_t>(i - 9)};
@@ -90,19 +90,19 @@ TEST_CASE("Test KnightMoves", "[util][moves]") {
 	KnightMoves(board.getBitboard(player_t::white, piece_t::knight),
 				board.occupancyMap(player_t::white), whiteMoves);
 	REQUIRE(whiteMoves.size() == 4);
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Nb1-a3")));
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Nb1-c3")));
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Ng1-f3")));
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Ng1-h3")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Nb1-a3")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Nb1-c3")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Ng1-f3")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Ng1-h3")));
 
 	std::vector<move_t> blackMoves;
 	KnightMoves(board.getBitboard(player_t::black, piece_t::knight),
 				board.occupancyMap(player_t::black), blackMoves);
 	REQUIRE(blackMoves.size() == 4);
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Nb8-a6")));
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Nb8-c6")));
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Ng8-f6")));
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Ng8-h6")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Nb8-a6")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Nb8-c6")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Ng8-f6")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Ng8-h6")));
 }
 
 TEST_CASE("Test BishopMoves", "[util][moves]") {
@@ -132,29 +132,29 @@ TEST_CASE("Test BishopMoves", "[util][moves]") {
 		BishopMoves(board.getBitboard(player_t::white, piece_t::bishop), whiteMap, blackMap,
 					whiteMoves);
 		REQUIRE(whiteMoves.size() == 9);
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-b3")));
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-d5")));
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-e6")));
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4xf7")));
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-b5")));
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-a6")));
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-d3")));
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-e2")));
-		REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Bc4-f1")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4-b3")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4-d5")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4-e6")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4xf7")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4-b5")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4-a6")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4-d3")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4-e2")));
+		REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Bc4-f1")));
 
 		std::vector<move_t> blackMoves;
 		BishopMoves(board.getBitboard(player_t::black, piece_t::bishop), blackMap, whiteMap,
 					blackMoves);
 		REQUIRE(blackMoves.size() == 9);
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-b6")));
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-d4")));
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-e3")));
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5xf2")));
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-a3")));
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-b4")));
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-d6")));
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-e7")));
-		REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Bc5-f8")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5-b6")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5-d4")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5-e3")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5xf2")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5-a3")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5-b4")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5-d6")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5-e7")));
+		REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Bc5-f8")));
 	}
 }
 
@@ -245,16 +245,16 @@ TEST_CASE("Test KingMoves", "[util][moves]") {
 	std::vector<move_t> whiteMoves;
 	KingMoves(board, player_t::white, whiteMoves);
 	REQUIRE(whiteMoves.size() == 3);
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Ke1-f1")));
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "Ke1-e2")));
-	REQUIRE(contains(whiteMoves, MakeMove(player_t::white, "O-O")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Ke1-f1")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Ke1-e2")));
+	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "O-O")));
 
 	std::vector<move_t> blackMoves;
 	KingMoves(board, player_t::black, blackMoves);
 	REQUIRE(blackMoves.size() == 3);
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Ke8-d8")));
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "Ke8-e7")));
-	REQUIRE(contains(blackMoves, MakeMove(player_t::black, "O-O-O")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Ke8-d8")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Ke8-e7")));
+	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "O-O-O")));
 }
 
 TEST_CASE("Test PawnAttackMask", "[util][moves]") {

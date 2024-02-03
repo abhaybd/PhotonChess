@@ -43,26 +43,26 @@ TEST_CASE("Test string parsing and serialization", "[core]") {
 		REQUIRE(ParseSquare("h8") == 63);
 	}
 
-	SECTION("Test MakeMove") {
-		move_t kingsideCastleW = MakeMove(player_t::white, "O-O");
+	SECTION("Test MoveFromLongNotation") {
+		move_t kingsideCastleW = MoveFromLongNotation(player_t::white, "O-O");
 		REQUIRE(kingsideCastleW.from == ParseSquare("e1"));
 		REQUIRE(kingsideCastleW.to == ParseSquare("g1"));
-		move_t kingsideCastleB = MakeMove(player_t::black, "O-O");
+		move_t kingsideCastleB = MoveFromLongNotation(player_t::black, "O-O");
 		REQUIRE(kingsideCastleB.from == ParseSquare("e8"));
 		REQUIRE(kingsideCastleB.to == ParseSquare("g8"));
 
-		move_t queensideCastleW = MakeMove(player_t::white, "O-O-O");
+		move_t queensideCastleW = MoveFromLongNotation(player_t::white, "O-O-O");
 		REQUIRE(queensideCastleW.from == ParseSquare("e1"));
 		REQUIRE(queensideCastleW.to == ParseSquare("c1"));
-		move_t queensideCastleB = MakeMove(player_t::black, "O-O-O");
+		move_t queensideCastleB = MoveFromLongNotation(player_t::black, "O-O-O");
 		REQUIRE(queensideCastleB.from == ParseSquare("e8"));
 		REQUIRE(queensideCastleB.to == ParseSquare("c8"));
 
-		move_t move1 = MakeMove(player_t::white, "Nb1-c3");
+		move_t move1 = MoveFromLongNotation(player_t::white, "Nb1-c3");
 		REQUIRE(move1.from == ParseSquare("b1"));
 		REQUIRE(move1.to == ParseSquare("c3"));
 
-		move_t move2 = MakeMove(player_t::black, "e7-e5");
+		move_t move2 = MoveFromLongNotation(player_t::black, "e7-e5");
 		REQUIRE(move2.from == ParseSquare("e7"));
 		REQUIRE(move2.to == ParseSquare("e5"));
 	}
