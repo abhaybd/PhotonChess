@@ -234,24 +234,27 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 	addMoves(shift(king & ~FILE_H_MASK, -7) & ~playerOccupancy, 7, moves);
 	addMoves(shift(king & ~FILE_A_MASK, -9) & ~playerOccupancy, 9, moves);
 
+	player_t otherPlayer = OtherPlayer(player);
 	uint8_t from = ffsll(king) - 1;
-	bitboard_t occupancy = board.occupancyMap();
-	bitboard_t castleKMask = player == player_t::white ? CASTLE_K_MASK_W : CASTLE_K_MASK_B;
-	bitboard_t castleQMask = player == player_t::white ? CASTLE_Q_MASK_W : CASTLE_Q_MASK_B;
-	if (board.hasCastlingRights(player, castle_t::king) && (occupancy & castleKMask) == 0) {
-		assert(from == (player == player_t::white ? 4 : 60));
-		assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
-							  player == player_t::white ? 7 : 63));
-		if (!IsAnyAttacked(board, castleKMask, OtherPlayer(player))) {
-			moves.push_back(move_t{from, player == player_t::white ? 6_uc : 62_uc});
+	if (!board.isSquareAttacked(otherPlayer, from)) {
+		bitboard_t occupancy = board.occupancyMap();
+		bitboard_t castleKMask = player == player_t::white ? CASTLE_K_MASK_W : CASTLE_K_MASK_B;
+		bitboard_t castleQMask = player == player_t::white ? CASTLE_Q_MASK_W : CASTLE_Q_MASK_B;
+		if (board.hasCastlingRights(player, castle_t::king) && (occupancy & castleKMask) == 0) {
+			assert(from == (player == player_t::white ? 4 : 60));
+			assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
+								player == player_t::white ? 7 : 63));
+			if (!IsAnyAttacked(board, castleKMask, otherPlayer)) {
+				moves.push_back(move_t{from, player == player_t::white ? 6_uc : 62_uc});
+			}
 		}
-	}
-	if (board.hasCastlingRights(player, castle_t::queen) && (occupancy & castleQMask) == 0) {
-		assert(from == (player == player_t::white ? 4 : 60));
-		assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
-							  player == player_t::white ? 0 : 56));
-		if (!IsAnyAttacked(board, castleQMask, OtherPlayer(player))) {
-			moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
+		if (board.hasCastlingRights(player, castle_t::queen) && (occupancy & castleQMask) == 0) {
+			assert(from == (player == player_t::white ? 4 : 60));
+			assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
+								player == player_t::white ? 0 : 56));
+			if (!IsAnyAttacked(board, castleQMask, otherPlayer)) {
+				moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
+			}
 		}
 	}
 }

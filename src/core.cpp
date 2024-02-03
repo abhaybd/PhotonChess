@@ -1,7 +1,7 @@
 #include "photon/core.h"
 
-#include "photon/util.h"
 #include "moves.h"
+#include "photon/util.h"
 
 #include <assert.h>
 #include <charconv>
@@ -98,6 +98,94 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 	return ret;
 }
 
+board_t& board_t::doMove(move_t move) {
+	assert(move.getPlayer(*this) == playerToMove());
+	player_t player = playerToMove();
+	piece_t piece = move.getPiece(*this);
+	auto captured = move.getCapturedPiece(*this);
+	if (captured) {
+		assert(move.isCapture(*this));
+		assert(getBitboard(OtherPlayer(player), *captured) & (1ULL << move.to));
+		getBitboard(OtherPlayer(player), *captured) &= ~(1ULL << move.to);
+	}
+	bitboard_t& bb = getBitboard(player, piece);
+	bb &= ~(1ULL << move.from);
+	bb |= 1ULL << move.to;
+
+	// TODO: handle pawn promotion
+
+	// move rook if castling
+	if (move.isCastle(*this, castle_t::king)) {
+		bitboard_t& rook = getBitboard(player, piece_t::rook);
+		rook &= ~(1ULL << (player == player_t::white ? 7 : 63));
+		rook |= 1ULL << (player == player_t::white ? 5 : 61);
+	} else if (move.isCastle(*this, castle_t::queen)) {
+		bitboard_t& rook = getBitboard(player, piece_t::rook);
+		rook &= ~(1ULL << (player == player_t::white ? 0 : 56));
+		rook |= 1ULL << (player == player_t::white ? 3 : 59);
+	}
+
+	// handle e.p. capture
+	if (move.isEnPassant(*this)) {
+		bitboard_t& pawn = getBitboard(player, piece_t::pawn);
+		bitboard_t mask = 1ULL << move.to;
+		if (player == player_t::white) {
+			mask >>= 8;
+		} else {
+			mask <<= 8;
+		}
+		pawn &= ~mask;
+	}
+
+	// update clocks
+	if (piece == piece_t::pawn || captured) {
+		halfmoveClock = 0;
+	} else {
+		halfmoveClock++;
+	}
+	if (player == player_t::black) {
+		fullmove++;
+	}
+	// toggle player to move
+	metadata ^= 1 << 5;
+	// remove castling rights if king moves
+	if (piece == piece_t::king) {
+		metadata &= ~(0b11 << (player == player_t::white ? 0 : 2));
+	}
+	// remove castling rights if rook moves
+	if (piece == piece_t::rook) {
+		if (player == player_t::white) {
+			if (move.from == 0) {
+				metadata &= ~0b10;
+			} else if (move.from == 7) {
+				metadata &= ~0b1;
+			}
+		} else {
+			if (move.from == 56) {
+				metadata &= ~0b1000;
+			} else if (move.from == 63) {
+				metadata &= ~0b0100;
+			}
+		}
+	}
+
+	// handle e.p. rights
+	if (piece == piece_t::pawn &&
+		std::abs(static_cast<int>(move.from) - static_cast<int>(move.to)) == 16) {
+		enPassant = player == player_t::white ? move.from + 8 : move.from - 8;
+	} else {
+		enPassant = -1;
+	}
+
+	return *this;
+}
+
+board_t board_t::doMoveCopy(move_t move) const {
+	board_t copy = *this;
+	copy.doMove(move);
+	return copy;
+}
+
 std::vector<move_t> board_t::moves(player_t player) const {
 	std::vector<move_t> moves = GenerateMoves(*this, player);
 
@@ -122,11 +210,13 @@ bool board_t::isSquareAttacked(player_t player, uint8_t square) const {
 		return true;
 	}
 	bitboard_t bishopAttacks = BishopAttackMask(bb, enemyOccupancy, playerOccupancy);
-	if (bishopAttacks & (getBitboard(player, piece_t::bishop) | getBitboard(player, piece_t::queen))) {
+	if (bishopAttacks &
+		(getBitboard(player, piece_t::bishop) | getBitboard(player, piece_t::queen))) {
 		return true;
 	}
 	bitboard_t rookAttacks = RookAttackMask(bb, enemyOccupancy, playerOccupancy);
-	if (rookAttacks & (getBitboard(player, piece_t::rook) | getBitboard(player, piece_t::queen))) {
+	if (rookAttacks &
+		(getBitboard(player, piece_t::rook) | getBitboard(player, piece_t::queen))) {
 		return true;
 	}
 	bitboard_t kingAttacks = KingAttackMask(bb, enemyOccupancy);
@@ -160,6 +250,28 @@ player_t move_t::getPlayer(const board_t& board) const {
 	player_t player = board.playerToMove();
 	assert(CheckOccupancy(board.occupancyMap(player), from));
 	return player;
+}
+
+piece_t move_t::getPiece(const board_t& board) const {
+	player_t player = getPlayer(board);
+	for (piece_t p : ALL_PIECES) {
+		if (CheckOccupancy(board.getBitboard(player, p), from)) {
+			return p;
+		}
+	}
+	CHECK_F(false, "No piece found at square %s", SquareToString(from).c_str());
+}
+
+std::optional<piece_t> move_t::getCapturedPiece(const board_t& board) const {
+	for (piece_t p : ALL_PIECES) {
+		if (CheckOccupancy(board.getBitboard(OtherPlayer(getPlayer(board)), p), to)) {
+			return p;
+		}
+	}
+	if (isEnPassant(board)) {
+		return piece_t::pawn;
+	}
+	return std::nullopt;
 }
 
 bool move_t::isCastle(const board_t& board) const {

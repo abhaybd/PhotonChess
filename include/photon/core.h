@@ -30,6 +30,15 @@ enum class piece_t {
 	king = 5
 };
 
+constexpr std::array<piece_t, 6> ALL_PIECES = {
+	piece_t::pawn,
+	piece_t::knight,
+	piece_t::bishop,
+	piece_t::rook,
+	piece_t::queen,
+	piece_t::king
+};
+
 struct move_t;
 
 struct board_t {
@@ -64,6 +73,9 @@ struct board_t {
 	bitboard_t occupancyMap() const;
 	bitboard_t occupancyMap(player_t player) const;
 
+	board_t& doMove(move_t move);
+	board_t doMoveCopy(move_t move) const;
+
 	std::string fen() const;
 	std::vector<move_t> moves(player_t player) const;
 	bool isSquareAttacked(player_t player, uint8_t square) const;
@@ -76,6 +88,8 @@ struct move_t {
 	bool isCapture(const board_t& board) const;
 	bool isEnPassant(const board_t& board) const;
 	player_t getPlayer(const board_t& board) const;
+	piece_t getPiece(const board_t& board) const;
+	std::optional<piece_t> getCapturedPiece(const board_t& board) const;
 	bool isCastle(const board_t& board) const;
 	bool isCastle(const board_t& board, castle_t castle) const;
 
