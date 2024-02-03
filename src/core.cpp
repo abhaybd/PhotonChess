@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <charconv>
 #include <loguru.hpp>
+#include <sstream>
 
 using namespace photon::util;
 
@@ -39,8 +40,70 @@ bitboard_t board_t::getBitboard(player_t player, piece_t piece) const {
 }
 
 std::string board_t::fen() const {
-	// TODO: implement
-	return "";
+	std::stringstream ss;
+	for (int rank = 7; rank >= 0; rank--) {
+		int empty = 0;
+		for (int file = 0; file < 8; file++) {
+			int idx = rank * 8 + file;
+			bool found = false;
+			for (piece_t piece : ALL_PIECES) {
+				bitboard_t whiteBB = getBitboard(player_t::white, piece);
+				bitboard_t blackBB = getBitboard(player_t::black, piece);
+				if (CheckOccupancy(whiteBB | blackBB, idx)) {
+					if (empty > 0) {
+						ss << empty;
+						empty = 0;
+					}
+					if (CheckOccupancy(whiteBB, idx)) {
+						ss << PieceToChar(piece);
+					} else {
+						ss << std::tolower(PieceToChar(piece), std::locale());
+					}
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				empty++;
+			}
+		}
+		if (empty > 0) {
+			ss << empty;
+		}
+		if (rank > 0) {
+			ss << '/';
+		}
+	}
+	ss << ' ' << (playerToMove() == player_t::white ? 'w' : 'b') << ' ';
+	bool castleRights = false;
+	if (hasCastlingRights(player_t::white, castle_t::king)) {
+		ss << 'K';
+		castleRights = true;
+	}
+	if (hasCastlingRights(player_t::white, castle_t::queen)) {
+		ss << 'Q';
+		castleRights = true;
+	}
+	if (hasCastlingRights(player_t::black, castle_t::king)) {
+		ss << 'k';
+		castleRights = true;
+	}
+	if (hasCastlingRights(player_t::black, castle_t::queen)) {
+		ss << 'q';
+		castleRights = true;
+	}
+	if (!castleRights) {
+		ss << '-';
+	}
+	ss << ' ';
+	if (enPassant >= 0) {
+		ss << SquareToString(enPassant);
+	} else {
+		ss << '-';
+	}
+	ss << ' ';
+	ss << static_cast<int>(halfmoveClock) << " " << fullmove;
+	return ss.str();
 }
 
 bool board_t::hasCastlingRights(player_t player, castle_t castle) const {
@@ -81,9 +144,15 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 board_t& board_t::doMove(move_t move) {
 	assert(move.getPlayer(*this) == playerToMove());
 	player_t player = playerToMove();
+
+	// get data from move before mutating this
 	piece_t piece = move.getPiece(*this);
 	auto captured = move.getCapturedPiece(*this);
-	if (captured) {
+	bool isKCastle = move.isCastle(*this, castle_t::king);
+	bool isQCastle = move.isCastle(*this, castle_t::queen);
+	bool isEP = move.isEnPassant(*this);
+
+	if (captured && !isEP) {
 		assert(move.isCapture(*this));
 		assert(getBitboard(OtherPlayer(player), *captured) & (1ULL << move.to));
 		getBitboard(OtherPlayer(player), *captured) &= ~(1ULL << move.to);
@@ -95,19 +164,19 @@ board_t& board_t::doMove(move_t move) {
 	// TODO: handle pawn promotion
 
 	// move rook if castling
-	if (move.isCastle(*this, castle_t::king)) {
+	if (isKCastle) {
 		bitboard_t& rook = getBitboard(player, piece_t::rook);
 		rook &= ~(1ULL << (player == player_t::white ? 7 : 63));
 		rook |= 1ULL << (player == player_t::white ? 5 : 61);
-	} else if (move.isCastle(*this, castle_t::queen)) {
+	} else if (isQCastle) {
 		bitboard_t& rook = getBitboard(player, piece_t::rook);
 		rook &= ~(1ULL << (player == player_t::white ? 0 : 56));
 		rook |= 1ULL << (player == player_t::white ? 3 : 59);
 	}
 
 	// handle e.p. capture
-	if (move.isEnPassant(*this)) {
-		bitboard_t& pawn = getBitboard(player, piece_t::pawn);
+	if (isEP) {
+		bitboard_t& pawn = getBitboard(OtherPlayer(player), piece_t::pawn);
 		bitboard_t mask = 1ULL << move.to;
 		if (player == player_t::white) {
 			mask >>= 8;
@@ -169,9 +238,18 @@ board_t board_t::doMoveCopy(move_t move) const {
 std::vector<move_t> board_t::moves(player_t player) const {
 	std::vector<move_t> moves = GenerateMoves(*this, player);
 
-	// TODO Filter out moves that leave the king in check
+	std::vector<move_t> legalMoves;
+	legalMoves.reserve(moves.size());
 
-	return moves;
+	player_t otherPlayer = OtherPlayer(player);
+	for (move_t move : moves) {
+		board_t copy = doMoveCopy(move);
+		if (!copy.isSquareAttacked(player, copy.getBitboard(otherPlayer, piece_t::king))) {
+			legalMoves.push_back(move);
+		}
+	}
+
+	return legalMoves;
 }
 
 bool board_t::isSquareAttacked(player_t player, uint8_t square) const {

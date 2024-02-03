@@ -109,3 +109,54 @@ TEST_CASE("Test IsSquareAttacked", "[core]") {
 		REQUIRE_FALSE(board.isSquareAttacked(player_t::white, i));
 	}
 }
+
+TEST_CASE("Test fen", "[core]") {
+	SECTION("Test DefaultBoard") {
+		board_t board = DefaultBoard();
+		REQUIRE(board.fen() == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+	}
+
+	SECTION("Test more complicated") {
+		std::string fen =
+			"r1bqk2r/pp1p1ppp/3b3n/1BpPp3/1n2P3/5N2/PPP2PPP/RNBQ1RK1 w kq c6 0 7";
+		board_t board = MakeBoard(fen);
+		REQUIRE(board.fen() == fen);
+	}
+}
+
+TEST_CASE("Test doMove", "[core]") {
+	// A bunch of moves that test e.p., capturing, pawn moves, castling, etc.
+	// This should cover most/all relevant cases
+	std::vector<std::pair<std::string, std::string>> game = {
+		{"e2-e4", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"},
+		{"e7-e5", "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"},
+		{"Ng1-f3", "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"},
+		{"Nb8-c6", "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"},
+		{"Nf3xe5", "r1bqkbnr/pppp1ppp/2n5/4N3/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 0 3"},
+		{"Nc6xe5", "r1bqkbnr/pppp1ppp/8/4n3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 4"},
+		{"d2-d4", "r1bqkbnr/pppp1ppp/8/4n3/3PP3/8/PPP2PPP/RNBQKB1R b KQkq d3 0 4"},
+		{"Bf8-e7", "r1bqk1nr/ppppbppp/8/4n3/3PP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5"},
+		{"d4-d5", "r1bqk1nr/ppppbppp/8/3Pn3/4P3/8/PPP2PPP/RNBQKB1R b KQkq - 0 5"},
+		{"c7-c5", "r1bqk1nr/pp1pbppp/8/2pPn3/4P3/8/PPP2PPP/RNBQKB1R w KQkq c6 0 6"},
+		{"d5xc6", "r1bqk1nr/pp1pbppp/2P5/4n3/4P3/8/PPP2PPP/RNBQKB1R b KQkq - 0 6"}, // e.p.
+		{"d7xc6", "r1bqk1nr/pp2bppp/2p5/4n3/4P3/8/PPP2PPP/RNBQKB1R w KQkq - 0 7"},
+		{"Bf1-d3", "r1bqk1nr/pp2bppp/2p5/4n3/4P3/3B4/PPP2PPP/RNBQK2R b KQkq - 1 7"},
+		{"Bc8-e6", "r2qk1nr/pp2bppp/2p1b3/4n3/4P3/3B4/PPP2PPP/RNBQK2R w KQkq - 2 8"},
+		{"O-O", "r2qk1nr/pp2bppp/2p1b3/4n3/4P3/3B4/PPP2PPP/RNBQ1RK1 b kq - 3 8"},
+		{"Ng8-f6", "r2qk2r/pp2bppp/2p1bn2/4n3/4P3/3B4/PPP2PPP/RNBQ1RK1 w kq - 4 9"},
+		{"Nb1-c3", "r2qk2r/pp2bppp/2p1bn2/4n3/4P3/2NB4/PPP2PPP/R1BQ1RK1 b kq - 5 9"},
+		{"Rh8-g8", "r2qk1r1/pp2bppp/2p1bn2/4n3/4P3/2NB4/PPP2PPP/R1BQ1RK1 w q - 6 10"},
+		{"a2-a3", "r2qk1r1/pp2bppp/2p1bn2/4n3/4P3/P1NB4/1PP2PPP/R1BQ1RK1 b q - 0 10"},
+		{"Qd8-d7", "r3k1r1/pp1qbppp/2p1bn2/4n3/4P3/P1NB4/1PP2PPP/R1BQ1RK1 w q - 1 11"},
+		{"Nc3-d5", "r3k1r1/pp1qbppp/2p1bn2/3Nn3/4P3/P2B4/1PP2PPP/R1BQ1RK1 b q - 2 11"},
+		{"O-O-O", "2kr2r1/pp1qbppp/2p1bn2/3Nn3/4P3/P2B4/1PP2PPP/R1BQ1RK1 w - - 3 12"}};
+
+	board_t board = DefaultBoard();
+	for (size_t i = 0; i < game.size(); i++) {
+		auto& pair = game[i];
+		INFO("Ply " << i << ": " << pair.first);
+		move_t move = MoveFromLongNotation(board.playerToMove(), pair.first);
+		board.doMove(move);
+		REQUIRE(board.fen() == pair.second);
+	}
+}
