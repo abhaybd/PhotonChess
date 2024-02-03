@@ -160,3 +160,24 @@ TEST_CASE("Test doMove", "[core]") {
 		REQUIRE(board.fen() == pair.second);
 	}
 }
+
+TEST_CASE("Test move generation", "[core]") {
+	// TODO add white to move
+	{
+		// black to move
+		board_t board = MakeBoard("r3k2r/p7/4n3/2B2pPb/4Q3/8/6p1/R3K2R b KQkq - 0 1");
+		auto moves = board.moves();
+
+		std::vector<std::string> trueMoves = {
+			"O-O-O",   "Ke8-d8",   "Ke8-d7",   "Ke8-f7",   "Ra8-b8",   "Ra8-c8",
+			"Ra8-d8",  "Rh8-g8",   "Rh8-f8",   "Rh8-h7",   "Rh8-h6",   "a7-a6",
+			"a7-a5",   "f5-f4",	   "f5xe4",	   "g2-g1=Q+", "g2-g1=R+", "g2-g1=B",
+			"g2-g1=N", "g2xh1=Q+", "g2xh1=R+", "g2xh1=B",  "g2xh1=N",  "Bh5-g6",
+			"Bh5-f7",  "Bh5-g4",   "Bh5-f3",   "Bh5-e2",   "Bh5-d1"};
+		REQUIRE(moves.size() == trueMoves.size());
+		for (auto& moveStr : trueMoves) {
+			move_t move = MoveFromLongNotation(board.playerToMove(), moveStr);
+			REQUIRE(std::find(moves.begin(), moves.end(), move) != moves.end());
+		}
+	}
+}

@@ -2,6 +2,8 @@
 
 #include <charconv>
 #include <loguru.hpp>
+#include <regex>
+#include <sstream>
 
 namespace photon::util {
 namespace {
@@ -135,11 +137,11 @@ board_t MakeBoard(std::string_view fen) {
 
 	board.enPassant = parts[3] == "-" ? -1 : ParseSquare(parts[3]);
 	auto halfmoveRet = std::from_chars(parts[4].begin(), parts[4].end(), board.halfmoveClock);
-	CHECK_F(halfmoveRet.ec == std::errc{}, "Unable to parse halfmove clock string: %.*s",
-			static_cast<int>(parts[4].length()), parts[4].data());
+	CHECK_F(halfmoveRet.ec == std::errc{}, "Unable to parse halfmove clock string: %s",
+			std::string(parts[4]).c_str());
 	auto fullmoveRet = std::from_chars(parts[5].begin(), parts[5].end(), board.fullmove);
-	CHECK_F(fullmoveRet.ec == std::errc{}, "Unable to parse fullmove string: %.*s",
-			static_cast<int>(parts[5].length()), parts[5].data());
+	CHECK_F(fullmoveRet.ec == std::errc{}, "Unable to parse fullmove string: %s",
+			std::string(parts[5]).c_str());
 
 	return board;
 }
@@ -149,7 +151,7 @@ board_t DefaultBoard() {
 }
 
 move_t MoveFromLongNotation(player_t player, std::string_view longNotation) {
-	move_t move;
+	move_t move = {0, 0};
 	if (longNotation == "O-O") {
 		if (player == player_t::white) {
 			move.from = ParseSquare("e1");
@@ -167,23 +169,36 @@ move_t MoveFromLongNotation(player_t player, std::string_view longNotation) {
 			move.to = ParseSquare("c8");
 		}
 	} else {
-		// TODO: handle promotion, handle additional marks like checks, checkmates, etc.
-		CHECK_F(longNotation.length() == 5 || longNotation.length() == 6,
-				"Invalid format for long notation: %.*s",
-				static_cast<int>(longNotation.length()), longNotation.data());
-		if (longNotation.length() == 6) {
-			CharToPiece(longNotation[0]);
+		std::regex regex("^[NBRQK]?[a-h][1-8][-x][a-h][1-8](?:=[NBRQK])?[+#]?$");
+		bool match = std::regex_match(longNotation.cbegin(), longNotation.cend(), regex);
+		CHECK_F(match, "Invalid long notation: %s", std::string(longNotation).c_str());
+		if (std::isupper(longNotation[0])) {
 			longNotation = longNotation.substr(1);
 		}
 		move.from = ParseSquare(longNotation.substr(0, 2));
-		move.to = ParseSquare(longNotation.substr(3));
+		move.to = ParseSquare(longNotation.substr(3, 2));
+		size_t eqIdx = longNotation.rfind("=");
+		if (eqIdx != std::string_view::npos) {
+			piece_t p = CharToPiece(longNotation[eqIdx + 1]);
+			move.promotion = static_cast<int8_t>(p);
+		}
 	}
 	return move;
 }
 
 move_t MoveFromUCI(std::string_view uci);
 
-std::string MoveToLongNotation(board_t board, move_t move);
+std::string MoveToLongNotation(board_t board, move_t move) {
+	piece_t p = move.getPiece(board);
+	std::stringstream ss;
+	if (p != piece_t::pawn) {
+		ss << PieceToChar(p);
+	}
+	ss << SquareToString(move.from);
+	ss << (move.isCapture(board) ? 'x' : '-');
+	ss << SquareToString(move.to);
+	return ss.str();
+}
 
 std::string MoveToUCI(move_t move);
 

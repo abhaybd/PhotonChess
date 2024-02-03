@@ -7,6 +7,7 @@
 #include <charconv>
 #include <loguru.hpp>
 #include <sstream>
+#include <strings.h>
 
 using namespace photon::util;
 
@@ -118,7 +119,7 @@ bool board_t::hasCastlingRights(player_t player, castle_t castle) const {
 }
 
 player_t board_t::playerToMove() const {
-	return (metadata & (1 << 5)) == 0 ? player_t::white : player_t::black;
+	return (metadata & (1 << 4)) == 0 ? player_t::white : player_t::black;
 }
 
 std::optional<int> board_t::availableEnPassant() const {
@@ -127,6 +128,10 @@ std::optional<int> board_t::availableEnPassant() const {
 	} else {
 		return std::nullopt;
 	}
+}
+
+uint8_t board_t::getKing(player_t player) const {
+	return ffsll(getBitboard(player, piece_t::king)) - 1;
 }
 
 bitboard_t board_t::occupancyMap() const {
@@ -151,6 +156,7 @@ board_t& board_t::doMove(move_t move) {
 	bool isKCastle = move.isCastle(*this, castle_t::king);
 	bool isQCastle = move.isCastle(*this, castle_t::queen);
 	bool isEP = move.isEnPassant(*this);
+	auto promotion = move.getPromotion();
 
 	if (captured && !isEP) {
 		assert(move.isCapture(*this));
@@ -159,9 +165,12 @@ board_t& board_t::doMove(move_t move) {
 	}
 	bitboard_t& bb = getBitboard(player, piece);
 	bb &= ~(1ULL << move.from);
-	bb |= 1ULL << move.to;
 
-	// TODO: handle pawn promotion
+	if (promotion) {
+		getBitboard(player, *promotion) |= 1ULL << move.to;
+	} else {
+		bb |= 1ULL << move.to;
+	}
 
 	// move rook if castling
 	if (isKCastle) {
@@ -196,7 +205,7 @@ board_t& board_t::doMove(move_t move) {
 		fullmove++;
 	}
 	// toggle player to move
-	metadata ^= 1 << 5;
+	metadata ^= 1 << 4;
 	// remove castling rights if king moves
 	if (piece == piece_t::king) {
 		metadata &= ~(0b11 << (player == player_t::white ? 0 : 2));
@@ -235,7 +244,8 @@ board_t board_t::doMoveCopy(move_t move) const {
 	return copy;
 }
 
-std::vector<move_t> board_t::moves(player_t player) const {
+std::vector<move_t> board_t::moves() const {
+	player_t player = playerToMove();
 	std::vector<move_t> moves = GenerateMoves(*this, player);
 
 	std::vector<move_t> legalMoves;
@@ -244,7 +254,7 @@ std::vector<move_t> board_t::moves(player_t player) const {
 	player_t otherPlayer = OtherPlayer(player);
 	for (move_t move : moves) {
 		board_t copy = doMoveCopy(move);
-		if (!copy.isSquareAttacked(player, copy.getBitboard(otherPlayer, piece_t::king))) {
+		if (!copy.isSquareAttacked(otherPlayer, copy.getKing(player))) {
 			legalMoves.push_back(move);
 		}
 	}
@@ -283,6 +293,9 @@ bool board_t::isSquareAttacked(player_t player, uint8_t square) const {
 	}
 	return false;
 }
+
+move_t::move_t(uint8_t from, uint8_t to, int8_t promotion)
+	: from(from), to(to), promotion(promotion) {}
 
 bool move_t::isCapture(const board_t& board) const {
 	player_t player = getPlayer(board);
@@ -352,6 +365,18 @@ bool move_t::isCastle(const board_t& board, castle_t castle) const {
 
 	int toCol = to % 8;
 	return castle == castle_t::king ? toCol == 6 : toCol == 2;
+}
+
+bool move_t::isPromotion() const {
+	return promotion >= 0;
+}
+
+std::optional<piece_t> move_t::getPromotion() const {
+	if (promotion >= 0) {
+		return static_cast<piece_t>(promotion);
+	} else {
+		return std::nullopt;
+	}
 }
 
 bool move_t::operator==(const move_t& other) const {

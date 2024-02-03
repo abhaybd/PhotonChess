@@ -44,6 +44,19 @@ void addMoves(bitboard_t bb, int offset, std::vector<move_t>& moves) {
 	}
 }
 
+void addPromotions(bitboard_t bb, int offset, std::vector<move_t>& moves) {
+	while (bb != 0) {
+		int idx = ffsll(bb) - 1;
+		assert(idx >= 0);
+		uint8_t from = idx + offset;
+		uint8_t to = idx;
+		for (piece_t p : {piece_t::queen, piece_t::rook, piece_t::bishop, piece_t::knight}) {
+			moves.push_back({from, to, static_cast<int8_t>(p)});
+		}
+		bb &= ~(1ULL << idx);
+	}
+}
+
 uint8_t operator""_uc(unsigned long long int x) {
 	return static_cast<uint8_t>(x);
 }
@@ -116,21 +129,24 @@ void PawnMoves(bitboard_t pawns, bitboard_t occupancy, bitboard_t enemyOccupancy
 	bitboard_t promotionRank = player == player_t::white ? RANK_8_MASK : RANK_1_MASK;
 
 	int sign = player == player_t::white ? 1 : -1;
-	bitboard_t forward1 = shift(pawns, 8 * sign) & ~occupancy & ~promotionRank;
+	bitboard_t forward1 = shift(pawns, 8 * sign) & ~occupancy;
 	bitboard_t forward2 =
 		shift(pawns & startRank, 16 * sign) & ~occupancy & ~shift(occupancy, 8 * sign);
 	bitboard_t queensideCapture =
-		shift(pawns & ~FILE_A_MASK, (8 - sign) * sign) & enemyOccupancy & ~promotionRank;
+		shift(pawns & ~FILE_A_MASK, (8 - sign) * sign) & enemyOccupancy;
 	bitboard_t kingsideCapture =
-		shift(pawns & ~FILE_H_MASK, (8 + sign) * sign) & enemyOccupancy & ~promotionRank;
+		shift(pawns & ~FILE_H_MASK, (8 + sign) * sign) & enemyOccupancy;
 
 	// TODO add en passant
-	// TODO add promotion (both by moving and by capturing)
 
-	addMoves(forward1, -8 * sign, moves);
+	addMoves(forward1 & ~promotionRank, -8 * sign, moves);
 	addMoves(forward2, -16 * sign, moves);
-	addMoves(queensideCapture, -(8 - sign) * sign, moves);
-	addMoves(kingsideCapture, -(8 + sign) * sign, moves);
+	addMoves(queensideCapture & ~promotionRank, -(8 - sign) * sign, moves);
+	addMoves(kingsideCapture & ~promotionRank, -(8 + sign) * sign, moves);
+
+	addPromotions(forward1 & promotionRank, -8 * sign, moves);
+	addPromotions(queensideCapture & promotionRank, -(8 - sign) * sign, moves);
+	addPromotions(kingsideCapture & promotionRank, -(8 + sign) * sign, moves);
 }
 
 void KnightMoves(bitboard_t knights, bitboard_t playerOccupancy, std::vector<move_t>& moves) {
@@ -240,18 +256,20 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 		bitboard_t occupancy = board.occupancyMap();
 		bitboard_t castleKMask = player == player_t::white ? CASTLE_K_MASK_W : CASTLE_K_MASK_B;
 		bitboard_t castleQMask = player == player_t::white ? CASTLE_Q_MASK_W : CASTLE_Q_MASK_B;
-		if (board.hasCastlingRights(player, castle_t::king) && (occupancy & castleKMask) == 0) {
+		if (board.hasCastlingRights(player, castle_t::king) &&
+			(occupancy & castleKMask) == 0) {
 			assert(from == (player == player_t::white ? 4 : 60));
 			assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
-								player == player_t::white ? 7 : 63));
+								  player == player_t::white ? 7 : 63));
 			if (!IsAnyAttacked(board, castleKMask, otherPlayer)) {
 				moves.push_back(move_t{from, player == player_t::white ? 6_uc : 62_uc});
 			}
 		}
-		if (board.hasCastlingRights(player, castle_t::queen) && (occupancy & castleQMask) == 0) {
+		if (board.hasCastlingRights(player, castle_t::queen) &&
+			(occupancy & castleQMask) == 0) {
 			assert(from == (player == player_t::white ? 4 : 60));
 			assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
-								player == player_t::white ? 0 : 56));
+								  player == player_t::white ? 0 : 56));
 			if (!IsAnyAttacked(board, castleQMask, otherPlayer)) {
 				moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
 			}

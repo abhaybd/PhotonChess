@@ -64,6 +64,7 @@ struct board_t {
 	player_t playerToMove() const;
 	std::optional<int> availableEnPassant() const;
 
+	uint8_t getKing(player_t player) const;
 	bitboard_t occupancyMap() const;
 	bitboard_t occupancyMap(player_t player) const;
 
@@ -71,13 +72,17 @@ struct board_t {
 	board_t doMoveCopy(move_t move) const;
 
 	std::string fen() const;
-	std::vector<move_t> moves(player_t player) const;
+	std::vector<move_t> moves() const;
 	bool isSquareAttacked(player_t player, uint8_t square) const;
 };
 
 struct move_t {
 	uint8_t from;
 	uint8_t to;
+	// -1 if not a promotion, otherwise the integral equivalent of the piece_t value
+	int8_t promotion;
+
+	move_t(uint8_t from, uint8_t to, int8_t promotion=-1);
 
 	bool isCapture(const board_t& board) const;
 	bool isEnPassant(const board_t& board) const;
@@ -86,6 +91,8 @@ struct move_t {
 	std::optional<piece_t> getCapturedPiece(const board_t& board) const;
 	bool isCastle(const board_t& board) const;
 	bool isCastle(const board_t& board, castle_t castle) const;
+	bool isPromotion() const;
+	std::optional<piece_t> getPromotion() const;
 
 	bool operator==(const move_t& other) const;
 };
