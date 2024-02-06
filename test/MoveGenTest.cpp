@@ -30,7 +30,8 @@ TEST_CASE("Test PawnMoves on default board", "[util][moves]") {
 
 	std::vector<move_t> whiteMoves;
 	PawnMoves(board.getBitboard(player_t::white, piece_t::pawn), board.occupancyMap(),
-			  board.occupancyMap(player_t::black), player_t::white, whiteMoves);
+			  board.occupancyMap(player_t::black), player_t::white, board.availableEnPassant(),
+			  whiteMoves);
 	REQUIRE(whiteMoves.size() == 16);
 	for (uint8_t i = 8; i < 16; ++i) {
 		move_t move1 = {i, static_cast<uint8_t>(i + 8)};
@@ -41,7 +42,8 @@ TEST_CASE("Test PawnMoves on default board", "[util][moves]") {
 
 	std::vector<move_t> blackMoves;
 	PawnMoves(board.getBitboard(player_t::black, piece_t::pawn), board.occupancyMap(),
-			  board.occupancyMap(player_t::white), player_t::black, blackMoves);
+			  board.occupancyMap(player_t::white), player_t::black, board.availableEnPassant(),
+			  blackMoves);
 	REQUIRE(blackMoves.size() == 16);
 	for (uint8_t i = 48; i < 56; ++i) {
 		move_t move1 = {i, static_cast<uint8_t>(i - 8)};
@@ -58,7 +60,8 @@ TEST_CASE("Test PawnMoves with capturing", "[util][moves]") {
 
 	std::vector<move_t> whiteMoves;
 	PawnMoves(board.getBitboard(player_t::white, piece_t::pawn), board.occupancyMap(),
-			  board.occupancyMap(player_t::black), player_t::white, whiteMoves);
+			  board.occupancyMap(player_t::black), player_t::white, board.availableEnPassant(),
+			  whiteMoves);
 	REQUIRE(whiteMoves.size() == 14);
 	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "a4xb5")));
 	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "h4xg5")));
@@ -71,7 +74,8 @@ TEST_CASE("Test PawnMoves with capturing", "[util][moves]") {
 
 	std::vector<move_t> blackMoves;
 	PawnMoves(board.getBitboard(player_t::black, piece_t::pawn), board.occupancyMap(),
-			  board.occupancyMap(player_t::white), player_t::black, blackMoves);
+			  board.occupancyMap(player_t::white), player_t::black, board.availableEnPassant(),
+			  blackMoves);
 	REQUIRE(blackMoves.size() == 14);
 	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "a5xb4")));
 	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "h5xg4")));

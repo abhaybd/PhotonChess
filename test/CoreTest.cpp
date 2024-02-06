@@ -162,7 +162,56 @@ TEST_CASE("Test doMove", "[core]") {
 }
 
 TEST_CASE("Test move generation", "[core]") {
-	// TODO add white to move
+	{
+		// white to move
+		board_t board = MakeBoard("r3k2r/p7/4n3/2B2pPb/4Q3/8/6p1/R3K2R w KQkq f6 0 1");
+		auto moves = board.moves();
+
+		std::vector<std::string> trueMoves = {"Ke1-d2", "Ke1-f2", "g5xf6",	"g5-g6",  "Rh1-g1",
+											  "Rh1-f1", "Rh1-h2", "Rh1-h3", "Rh1-h4", "Rh1xh5",
+											  "Ra1-b1", "Ra1-c1", "Ra1-d1", "Ra1-a2", "Ra1-a3",
+											  "Ra1-a4", "Ra1-a5", "Ra1-a6", "Ra1xa7"};
+
+		uint8_t bishop = ParseSquare("c5");
+		for (uint8_t idx = ParseSquare("g1"); idx <= ParseSquare("a7"); idx += 7) {
+			if (idx != bishop) {
+				trueMoves.emplace_back(MoveToLongNotation(board, {bishop, idx}));
+			}
+		}
+		for (uint8_t idx = ParseSquare("a3"); idx <= ParseSquare("f8"); idx += 9) {
+			if (idx != bishop) {
+				trueMoves.emplace_back(MoveToLongNotation(board, {bishop, idx}));
+			}
+		}
+
+		uint8_t queen = ParseSquare("e4");
+		for (uint8_t idx = ParseSquare("g2"); idx <= ParseSquare("a8"); idx += 7) {
+			if (idx != queen) {
+				trueMoves.emplace_back(MoveToLongNotation(board, {queen, idx}));
+			}
+		}
+		for (uint8_t idx = ParseSquare("b1"); idx <= ParseSquare("f5"); idx += 9) {
+			if (idx != queen) {
+				trueMoves.emplace_back(MoveToLongNotation(board, {queen, idx}));
+			}
+		}
+		for (uint8_t idx = ParseSquare("a4"); idx <= ParseSquare("h4"); idx++) {
+			if (idx != queen) {
+				trueMoves.emplace_back(MoveToLongNotation(board, {queen, idx}));
+			}
+		}
+		for (uint8_t idx = ParseSquare("e2"); idx <= ParseSquare("e6"); idx += 8) {
+			if (idx != queen) {
+				trueMoves.emplace_back(MoveToLongNotation(board, {queen, idx}));
+			}
+		}
+
+		REQUIRE(moves.size() == trueMoves.size());
+		for (auto& moveStr : trueMoves) {
+			move_t move = MoveFromLongNotation(board.playerToMove(), moveStr);
+			REQUIRE(std::find(moves.begin(), moves.end(), move) != moves.end());
+		}
+	}
 	{
 		// black to move
 		board_t board = MakeBoard("r3k2r/p7/4n3/2B2pPb/4Q3/8/6p1/R3K2R b KQkq - 0 1");

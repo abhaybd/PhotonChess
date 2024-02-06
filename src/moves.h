@@ -41,7 +41,7 @@ void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move
  * @param moves The vector to store the generated moves.
  */
 void PawnMoves(bitboard_t pawns, bitboard_t occupancy, bitboard_t enemyOccupancy,
-			   player_t player, std::vector<move_t>& moves);
+			   player_t player, std::optional<int> enPassant, std::vector<move_t>& moves);
 
 /**
  * Generates knight moves for a given set of knights.

@@ -81,7 +81,7 @@ std::vector<move_t> GenerateMoves(const board_t& board, player_t player) {
 
 	std::vector<move_t> moves;
 	PawnMoves(board.getBitboard(player, piece_t::pawn), occupancy, enemyOccupancy, player,
-			  moves);
+			  board.availableEnPassant(), moves);
 	KnightMoves(board.getBitboard(player, piece_t::knight), playerOccupancy, moves);
 	BishopMoves(board.getBitboard(player, piece_t::bishop), playerOccupancy, enemyOccupancy,
 				moves);
@@ -95,25 +95,27 @@ std::vector<move_t> GenerateMoves(const board_t& board, player_t player) {
 }
 
 void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move_t>& moves) {
+	bitboard_t playerOccupancy = board.occupancyMap(player);
+	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
 	switch (piece) {
 		case piece_t::pawn:
-			PawnMoves(board.getBitboard(player, piece), board.occupancyMap(),
-					  board.occupancyMap(OtherPlayer(player)), player, moves);
+			PawnMoves(board.getBitboard(player, piece), board.occupancyMap(), enemyOccupancy,
+					  player, board.availableEnPassant(), moves);
 			break;
 		case piece_t::knight:
-			KnightMoves(board.getBitboard(player, piece), board.occupancyMap(player), moves);
+			KnightMoves(board.getBitboard(player, piece), playerOccupancy, moves);
 			break;
 		case piece_t::bishop:
-			BishopMoves(board.getBitboard(player, piece), board.occupancyMap(player),
-						board.occupancyMap(OtherPlayer(player)), moves);
+			BishopMoves(board.getBitboard(player, piece), playerOccupancy, enemyOccupancy,
+						moves);
 			break;
 		case piece_t::rook:
-			RookMoves(board.getBitboard(player, piece), board.occupancyMap(player),
-					  board.occupancyMap(OtherPlayer(player)), moves);
+			RookMoves(board.getBitboard(player, piece), playerOccupancy, enemyOccupancy,
+					  moves);
 			break;
 		case piece_t::queen:
-			QueenMoves(board.getBitboard(player, piece), board.occupancyMap(player),
-					   board.occupancyMap(OtherPlayer(player)), moves);
+			QueenMoves(board.getBitboard(player, piece), playerOccupancy, enemyOccupancy,
+					   moves);
 			break;
 		case piece_t::king:
 			KingMoves(board, player, moves);
@@ -124,25 +126,30 @@ void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move
 }
 
 void PawnMoves(bitboard_t pawns, bitboard_t occupancy, bitboard_t enemyOccupancy,
-			   player_t player, std::vector<move_t>& moves) {
+			   player_t player, std::optional<int> enPassant, std::vector<move_t>& moves) {
 	bitboard_t startRank = player == player_t::white ? RANK_2_MASK : RANK_7_MASK;
 	bitboard_t promotionRank = player == player_t::white ? RANK_8_MASK : RANK_1_MASK;
 
 	int sign = player == player_t::white ? 1 : -1;
 	bitboard_t forward1 = shift(pawns, 8 * sign) & ~occupancy;
+	addMoves(forward1 & ~promotionRank, -8 * sign, moves);
 	bitboard_t forward2 =
 		shift(pawns & startRank, 16 * sign) & ~occupancy & ~shift(occupancy, 8 * sign);
+	addMoves(forward2, -16 * sign, moves);
 	bitboard_t queensideCapture =
 		shift(pawns & ~FILE_A_MASK, (8 - sign) * sign) & enemyOccupancy;
+	addMoves(queensideCapture & ~promotionRank, -(8 - sign) * sign, moves);
 	bitboard_t kingsideCapture =
 		shift(pawns & ~FILE_H_MASK, (8 + sign) * sign) & enemyOccupancy;
-
-	// TODO add en passant
-
-	addMoves(forward1 & ~promotionRank, -8 * sign, moves);
-	addMoves(forward2, -16 * sign, moves);
-	addMoves(queensideCapture & ~promotionRank, -(8 - sign) * sign, moves);
 	addMoves(kingsideCapture & ~promotionRank, -(8 + sign) * sign, moves);
+
+	if (enPassant) {
+		bitboard_t enPassantMask = 1ULL << *enPassant;
+		bitboard_t enPassantQ = shift(pawns & ~FILE_A_MASK, (8 - sign) * sign) & enPassantMask;
+		addMoves(enPassantQ, -(8 - sign) * sign, moves);
+		bitboard_t enPassantK = shift(pawns & ~FILE_H_MASK, (8 + sign) * sign) & enPassantMask;
+		addMoves(enPassantK, -(8 + sign) * sign, moves);
+	}
 
 	addPromotions(forward1 & promotionRank, -8 * sign, moves);
 	addPromotions(queensideCapture & promotionRank, -(8 - sign) * sign, moves);
