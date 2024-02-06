@@ -12,6 +12,8 @@ bool CheckOccupancy(bitboard_t bitboard, int idx);
 char PieceToChar(piece_t piece);
 piece_t CharToPiece(char c);
 
+result_t WinResult(player_t player);
+
 uint8_t ParseSquare(std::string_view s);
 std::string SquareToString(uint8_t square);
 

@@ -124,6 +124,18 @@ TEST_CASE("Test fen", "[core]") {
 	}
 }
 
+TEST_CASE("Test Checkmate", "[core]") {
+	board_t board = DefaultBoard();
+	board.doMove(MoveFromLongNotation(player_t::white, "f2-f3"));
+	REQUIRE(board.result() == result_t::none);
+	board.doMove(MoveFromLongNotation(player_t::black, "e7-e5"));
+	REQUIRE(board.result() == result_t::none);
+	board.doMove(MoveFromLongNotation(player_t::white, "g2-g4"));
+	REQUIRE(board.result() == result_t::none);
+	board.doMove(MoveFromLongNotation(player_t::black, "Qd8-h4#"));
+	REQUIRE(board.result() == result_t::black_wins);
+}
+
 TEST_CASE("Test doMove", "[core]") {
 	// A bunch of moves that test e.p., capturing, pawn moves, castling, etc.
 	// This should cover most/all relevant cases

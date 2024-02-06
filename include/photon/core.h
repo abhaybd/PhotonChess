@@ -16,6 +16,13 @@ enum class player_t {
 	black
 };
 
+enum result_t {
+	white_wins,
+	black_wins,
+	draw,
+	none
+};
+
 enum class castle_t {
 	king,
 	queen
@@ -63,6 +70,8 @@ struct board_t {
 	bool hasCastlingRights(player_t player, castle_t castle) const;
 	player_t playerToMove() const;
 	std::optional<int> availableEnPassant() const;
+	bool inCheck(player_t player) const;
+	result_t result() const;
 
 	uint8_t getKing(player_t player) const;
 	bitboard_t occupancyMap() const;

@@ -56,6 +56,7 @@ char PieceToChar(piece_t piece) {
 			CHECK_F(false);
 	}
 }
+
 piece_t CharToPiece(char c) {
 	switch (std::toupper(c)) {
 		case 'P':
@@ -72,6 +73,17 @@ piece_t CharToPiece(char c) {
 			return piece_t::king;
 		default:
 			ABORT_F("Unknown character piece: %c", c);
+	}
+}
+
+result_t WinResult(player_t player) {
+	switch (player) {
+		case player_t::white:
+			return result_t::white_wins;
+		case player_t::black:
+			return result_t::black_wins;
+		default:
+			ABORT_F("Unknown player type: %d", static_cast<int>(player));
 	}
 }
 

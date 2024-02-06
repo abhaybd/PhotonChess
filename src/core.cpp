@@ -130,6 +130,21 @@ std::optional<int> board_t::availableEnPassant() const {
 	}
 }
 
+bool board_t::inCheck(player_t player) const {
+	return isSquareAttacked(OtherPlayer(player), getKing(player));
+}
+
+result_t board_t::result() const {
+	player_t player = playerToMove();
+	if (moves().empty()) {
+		return inCheck(player) ? WinResult(OtherPlayer(player)) : result_t::draw;
+	}
+	if (halfmoveClock >= 100) {
+		return result_t::draw;
+	}
+	return result_t::none;
+}
+
 uint8_t board_t::getKing(player_t player) const {
 	return ffsll(getBitboard(player, piece_t::king)) - 1;
 }
@@ -251,10 +266,9 @@ std::vector<move_t> board_t::moves() const {
 	std::vector<move_t> legalMoves;
 	legalMoves.reserve(moves.size());
 
-	player_t otherPlayer = OtherPlayer(player);
 	for (move_t move : moves) {
 		board_t copy = doMoveCopy(move);
-		if (!copy.isSquareAttacked(otherPlayer, copy.getKing(player))) {
+		if (!copy.inCheck(player)) {
 			legalMoves.push_back(move);
 		}
 	}
