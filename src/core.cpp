@@ -182,6 +182,19 @@ board_t& board_t::doMove(move_t move) {
 		assert(move.isCapture(*this));
 		assert(getBitboard(OtherPlayer(player), *captured) & (1ULL << move.to));
 		getBitboard(OtherPlayer(player), *captured) &= ~(1ULL << move.to);
+
+		// remove castling rights if rook is captured
+		if (*captured == piece_t::rook) {
+			if (move.to == 0) {
+				metadata &= ~0b10;
+			} else if (move.to == 7) {
+				metadata &= ~0b1;
+			} else if (move.to == 56) {
+				metadata &= ~0b1000;
+			} else if (move.to == 63) {
+				metadata &= ~0b100;
+			}
+		}
 	}
 	bitboard_t& bb = getBitboard(player, piece);
 	bb &= ~(1ULL << move.from);
