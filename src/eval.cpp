@@ -77,6 +77,7 @@ float PositionHeuristic(const board_t& board) {
 }
 
 evaluation_t EvalBoard(const board_t& board, int depth) {
+	// TODO: add iterative deepening
 	float alpha = std::numeric_limits<float>::lowest();
 	float beta = std::numeric_limits<float>::max();
 	auto eval = negamax(board, depth, 0, alpha, beta);
