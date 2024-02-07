@@ -13,6 +13,11 @@ using namespace photon::util;
 
 namespace photon {
 
+board_t::board_t() : metadata(0), enPassant(-1), halfmoveClock(0), fullmove(1) {
+	white.fill(0);
+	black.fill(0);
+}
+
 const std::array<bitboard_t, 6>& board_t::getBitboards(player_t player) const {
 	switch (player) {
 		case player_t::white:

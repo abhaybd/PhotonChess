@@ -198,7 +198,17 @@ move_t MoveFromLongNotation(player_t player, std::string_view longNotation) {
 	return move;
 }
 
-move_t MoveFromUCI(std::string_view uci);
+move_t MoveFromUCI(std::string_view uci) {
+	CHECK_F(uci.size() == 4 || uci.size() == 5);
+	uint8_t from = ParseSquare(uci.substr(0, 2));
+	uint8_t to = ParseSquare(uci.substr(2, 2));
+	int8_t promotion = -1;
+	if (uci.size() == 5) {
+		piece_t p = CharToPiece(uci[4]);
+		promotion = static_cast<int8_t>(p);
+	}
+	return {from, to, promotion};
+}
 
 std::string MoveToLongNotation(board_t board, move_t move) {
 	piece_t p = move.getPiece(board);
@@ -212,6 +222,15 @@ std::string MoveToLongNotation(board_t board, move_t move) {
 	return ss.str();
 }
 
-std::string MoveToUCI(move_t move);
+std::string MoveToUCI(move_t move) {
+	std::stringstream ss;
+	ss << SquareToString(move.from);
+	ss << SquareToString(move.to);
+	if (move.isPromotion()) {
+		char c = PieceToChar(*move.getPromotion());
+		ss << std::tolower(c, std::locale());
+	}
+	return ss.str();
+}
 
 } // namespace photon::util
