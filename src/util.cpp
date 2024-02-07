@@ -188,6 +188,7 @@ move_t MoveFromLongNotation(player_t player, std::string_view longNotation) {
 			longNotation = longNotation.substr(1);
 		}
 		move.from = ParseSquare(longNotation.substr(0, 2));
+		move.isCapture = longNotation[2] == 'x';
 		move.to = ParseSquare(longNotation.substr(3, 2));
 		size_t eqIdx = longNotation.rfind("=");
 		if (eqIdx != std::string_view::npos) {
@@ -198,7 +199,7 @@ move_t MoveFromLongNotation(player_t player, std::string_view longNotation) {
 	return move;
 }
 
-move_t MoveFromUCI(std::string_view uci) {
+move_t MoveFromUCI(std::string_view uci, bool isCapture) {
 	CHECK_F(uci.size() == 4 || uci.size() == 5);
 	uint8_t from = ParseSquare(uci.substr(0, 2));
 	uint8_t to = ParseSquare(uci.substr(2, 2));
@@ -207,7 +208,15 @@ move_t MoveFromUCI(std::string_view uci) {
 		piece_t p = CharToPiece(uci[4]);
 		promotion = static_cast<int8_t>(p);
 	}
-	return {from, to, promotion};
+	return {from, to, promotion, isCapture};
+}
+
+move_t MoveFromUCI(const board_t& board, std::string_view uci) {
+	move_t m = MoveFromUCI(uci);
+	player_t player = CheckOccupancy(board.occupancyMap(player_t::white), m.from) ? player_t::white : player_t::black;
+	CHECK_F(CheckOccupancy(board.occupancyMap(player), m.from));
+	m.isCapture = CheckOccupancy(board.occupancyMap(OtherPlayer(player)), m.to);
+	return m;
 }
 
 std::string MoveToLongNotation(board_t board, move_t move) {
@@ -217,7 +226,7 @@ std::string MoveToLongNotation(board_t board, move_t move) {
 		ss << PieceToChar(p);
 	}
 	ss << SquareToString(move.from);
-	ss << (move.isCapture(board) ? 'x' : '-');
+	ss << (move.isCapture ? 'x' : '-');
 	ss << SquareToString(move.to);
 	return ss.str();
 }

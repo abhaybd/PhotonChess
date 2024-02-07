@@ -90,9 +90,11 @@ TEST_CASE("Test PawnMoves with capturing", "[util][moves]") {
 TEST_CASE("Test KnightMoves", "[util][moves]") {
 	board_t board = DefaultBoard();
 
+	bitboard_t white = board.occupancyMap(player_t::white);
+	bitboard_t black = board.occupancyMap(player_t::black);
+
 	std::vector<move_t> whiteMoves;
-	KnightMoves(board.getBitboard(player_t::white, piece_t::knight),
-				board.occupancyMap(player_t::white), whiteMoves);
+	KnightMoves(board.getBitboard(player_t::white, piece_t::knight), white, black, whiteMoves);
 	REQUIRE(whiteMoves.size() == 4);
 	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Nb1-a3")));
 	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Nb1-c3")));
@@ -100,8 +102,7 @@ TEST_CASE("Test KnightMoves", "[util][moves]") {
 	REQUIRE(contains(whiteMoves, MoveFromLongNotation(player_t::white, "Ng1-h3")));
 
 	std::vector<move_t> blackMoves;
-	KnightMoves(board.getBitboard(player_t::black, piece_t::knight),
-				board.occupancyMap(player_t::black), blackMoves);
+	KnightMoves(board.getBitboard(player_t::black, piece_t::knight), black, white, blackMoves);
 	REQUIRE(blackMoves.size() == 4);
 	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Nb8-a6")));
 	REQUIRE(contains(blackMoves, MoveFromLongNotation(player_t::black, "Nb8-c6")));

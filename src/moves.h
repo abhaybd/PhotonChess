@@ -48,9 +48,11 @@ void PawnMoves(bitboard_t pawns, bitboard_t occupancy, bitboard_t enemyOccupancy
  *
  * @param knights The bitboard representing the knights.
  * @param playerOccupancy The bitboard representing the occupancy of player's pieces.
+ * @param enemyOccupancy The bitboard representing the occupancy of enemy pieces.
  * @param moves The vector to store the generated moves.
  */
-void KnightMoves(bitboard_t knights, bitboard_t playerOccupancy, std::vector<move_t>& moves);
+void KnightMoves(bitboard_t knights, bitboard_t playerOccupancy, bitboard_t enemyOccupancy,
+				 std::vector<move_t>& moves);
 
 /**
  * Generates bishop moves for a given set of bishops.

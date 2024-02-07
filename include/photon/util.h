@@ -84,9 +84,18 @@ move_t MoveFromLongNotation(player_t player, std::string_view longNotation);
 /**
  * @brief Creates a move from UCI (Universal Chess Interface) notation.
  * @param uci The UCI notation of the move.
+ * @param isCapture Whether the move is a capture.
  * @return The created move.
  */
-move_t MoveFromUCI(std::string_view uci);
+move_t MoveFromUCI(std::string_view uci, bool isCapture = false);
+
+/**
+ * @brief Creates a move from UCI (Universal Chess Interface) notation.
+ * @param board The current board.
+ * @param uci The UCI notation of the move.
+ * @return The created move.
+ */
+move_t MoveFromUCI(const board_t& board, std::string_view uci);
 
 /**
  * @brief Converts a move to its long algebraic notation.

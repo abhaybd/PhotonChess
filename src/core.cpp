@@ -179,7 +179,7 @@ board_t& board_t::doMove(move_t move) {
 	auto promotion = move.getPromotion();
 
 	if (captured && !isEP) {
-		assert(move.isCapture(*this));
+		assert(move.isCapture);
 		assert(getBitboard(OtherPlayer(player), *captured) & (1ULL << move.to));
 		getBitboard(OtherPlayer(player), *captured) &= ~(1ULL << move.to);
 
@@ -326,17 +326,8 @@ bool board_t::isSquareAttacked(player_t player, uint8_t square) const {
 	return false;
 }
 
-move_t::move_t(uint8_t from, uint8_t to, int8_t promotion)
-	: from(from), to(to), promotion(promotion) {}
-
-bool move_t::isCapture(const board_t& board) const {
-	player_t player = getPlayer(board);
-	if (CheckOccupancy(board.occupancyMap(player), from) &&
-		CheckOccupancy(board.occupancyMap(OtherPlayer(player)), to)) {
-		return true;
-	}
-	return isEnPassant(board);
-}
+move_t::move_t(uint8_t from, uint8_t to, int8_t promotion, bool isCapture)
+	: from(from), to(to), promotion(promotion), isCapture(isCapture) {}
 
 bool move_t::isEnPassant(const board_t& board) const {
 	// check that en passant is available and this move goes to that square
@@ -366,13 +357,15 @@ piece_t move_t::getPiece(const board_t& board) const {
 }
 
 std::optional<piece_t> move_t::getCapturedPiece(const board_t& board) const {
-	for (piece_t p : ALL_PIECES) {
-		if (CheckOccupancy(board.getBitboard(OtherPlayer(getPlayer(board)), p), to)) {
-			return p;
+	if (isCapture) {
+		for (piece_t p : ALL_PIECES) {
+			if (CheckOccupancy(board.getBitboard(OtherPlayer(getPlayer(board)), p), to)) {
+				return p;
+			}
 		}
-	}
-	if (isEnPassant(board)) {
-		return piece_t::pawn;
+		if (isEnPassant(board)) {
+			return piece_t::pawn;
+		}
 	}
 	return std::nullopt;
 }

@@ -211,21 +211,17 @@ struct move_t {
 	uint8_t to;
 	/** Piece type to promote to (if any), -1 if not a promotion */
 	int8_t promotion;
+	/** If the move is a capture */
+	bool isCapture;
 
 	/**
 	 * @brief Constructor for a chess move.
 	 * @param from Starting square of the move
 	 * @param to Destination square of the move
 	 * @param promotion Piece type to promote to (if any), -1 if not a promotion
+	 * @param isCapture If the move is a capture
 	 */
-	move_t(uint8_t from, uint8_t to, int8_t promotion = -1);
-
-	/**
-	 * @brief Checks if the move is a capture.
-	 * @param board The chessboard state
-	 * @return True if the move is a capture, false otherwise
-	 */
-	bool isCapture(const board_t& board) const;
+	move_t(uint8_t from, uint8_t to, int8_t promotion = -1, bool isCapture = false);
 
 	/**
 	 * @brief Checks if the move is an en passant capture.

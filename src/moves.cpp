@@ -33,25 +33,31 @@ T shift(T x, int shift) {
 	}
 }
 
-void addMoves(bitboard_t bb, int offset, std::vector<move_t>& moves) {
+void addMoves(bitboard_t bb, int offset, bool isCapture, std::vector<move_t>& moves) {
 	while (bb != 0) {
 		int idx = ffsll(bb) - 1;
 		assert(idx >= 0);
 		uint8_t from = idx + offset;
 		uint8_t to = idx;
-		moves.push_back({from, to});
+		moves.push_back({from, to, -1, isCapture});
 		bb &= ~(1ULL << idx);
 	}
 }
 
-void addPromotions(bitboard_t bb, int offset, std::vector<move_t>& moves) {
+void addMoves(bitboard_t bb, int offset, bitboard_t enemyOccupancy,
+			  std::vector<move_t>& moves) {
+	addMoves(bb & enemyOccupancy, offset, true, moves);
+	addMoves(bb & ~enemyOccupancy, offset, false, moves);
+}
+
+void addPromotions(bitboard_t bb, int offset, bool isCapture, std::vector<move_t>& moves) {
 	while (bb != 0) {
 		int idx = ffsll(bb) - 1;
 		assert(idx >= 0);
 		uint8_t from = idx + offset;
 		uint8_t to = idx;
 		for (piece_t p : {piece_t::queen, piece_t::rook, piece_t::bishop, piece_t::knight}) {
-			moves.push_back({from, to, static_cast<int8_t>(p)});
+			moves.push_back({from, to, static_cast<int8_t>(p), isCapture});
 		}
 		bb &= ~(1ULL << idx);
 	}
@@ -82,7 +88,8 @@ std::vector<move_t> GenerateMoves(const board_t& board, player_t player) {
 	std::vector<move_t> moves;
 	PawnMoves(board.getBitboard(player, piece_t::pawn), occupancy, enemyOccupancy, player,
 			  board.availableEnPassant(), moves);
-	KnightMoves(board.getBitboard(player, piece_t::knight), playerOccupancy, moves);
+	KnightMoves(board.getBitboard(player, piece_t::knight), playerOccupancy, enemyOccupancy,
+				moves);
 	BishopMoves(board.getBitboard(player, piece_t::bishop), playerOccupancy, enemyOccupancy,
 				moves);
 	RookMoves(board.getBitboard(player, piece_t::rook), playerOccupancy, enemyOccupancy,
@@ -103,7 +110,8 @@ void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move
 					  player, board.availableEnPassant(), moves);
 			break;
 		case piece_t::knight:
-			KnightMoves(board.getBitboard(player, piece), playerOccupancy, moves);
+			KnightMoves(board.getBitboard(player, piece), playerOccupancy, enemyOccupancy,
+						moves);
 			break;
 		case piece_t::bishop:
 			BishopMoves(board.getBitboard(player, piece), playerOccupancy, enemyOccupancy,
@@ -132,48 +140,49 @@ void PawnMoves(bitboard_t pawns, bitboard_t occupancy, bitboard_t enemyOccupancy
 
 	int sign = player == player_t::white ? 1 : -1;
 	bitboard_t forward1 = shift(pawns, 8 * sign) & ~occupancy;
-	addMoves(forward1 & ~promotionRank, -8 * sign, moves);
+	addMoves(forward1 & ~promotionRank, -8 * sign, false, moves);
 	bitboard_t forward2 =
 		shift(pawns & startRank, 16 * sign) & ~occupancy & ~shift(occupancy, 8 * sign);
-	addMoves(forward2, -16 * sign, moves);
+	addMoves(forward2, -16 * sign, false, moves);
 	bitboard_t queensideCapture =
 		shift(pawns & ~FILE_A_MASK, (8 - sign) * sign) & enemyOccupancy;
-	addMoves(queensideCapture & ~promotionRank, -(8 - sign) * sign, moves);
+	addMoves(queensideCapture & ~promotionRank, -(8 - sign) * sign, true, moves);
 	bitboard_t kingsideCapture =
 		shift(pawns & ~FILE_H_MASK, (8 + sign) * sign) & enemyOccupancy;
-	addMoves(kingsideCapture & ~promotionRank, -(8 + sign) * sign, moves);
+	addMoves(kingsideCapture & ~promotionRank, -(8 + sign) * sign, true, moves);
 
 	if (enPassant) {
 		bitboard_t enPassantMask = 1ULL << *enPassant;
 		bitboard_t enPassantQ = shift(pawns & ~FILE_A_MASK, (8 - sign) * sign) & enPassantMask;
-		addMoves(enPassantQ, -(8 - sign) * sign, moves);
+		addMoves(enPassantQ, -(8 - sign) * sign, true, moves);
 		bitboard_t enPassantK = shift(pawns & ~FILE_H_MASK, (8 + sign) * sign) & enPassantMask;
-		addMoves(enPassantK, -(8 + sign) * sign, moves);
+		addMoves(enPassantK, -(8 + sign) * sign, true, moves);
 	}
 
-	addPromotions(forward1 & promotionRank, -8 * sign, moves);
-	addPromotions(queensideCapture & promotionRank, -(8 - sign) * sign, moves);
-	addPromotions(kingsideCapture & promotionRank, -(8 + sign) * sign, moves);
+	addPromotions(forward1 & promotionRank, -8 * sign, false, moves);
+	addPromotions(queensideCapture & promotionRank, -(8 - sign) * sign, true, moves);
+	addPromotions(kingsideCapture & promotionRank, -(8 + sign) * sign, true, moves);
 }
 
-void KnightMoves(bitboard_t knights, bitboard_t playerOccupancy, std::vector<move_t>& moves) {
+void KnightMoves(bitboard_t knights, bitboard_t playerOccupancy, bitboard_t enemyOccupancy,
+				 std::vector<move_t>& moves) {
 	// left-front, front-left, front-right, right-front, etc.
 	bitboard_t lf = shift(knights & ~FILE_A_MASK & ~FILE_B_MASK, 6) & ~playerOccupancy;
-	addMoves(lf, -6, moves);
+	addMoves(lf, -6, enemyOccupancy, moves);
 	bitboard_t fl = shift(knights & ~FILE_A_MASK, 15) & ~playerOccupancy;
-	addMoves(fl, -15, moves);
+	addMoves(fl, -15, enemyOccupancy, moves);
 	bitboard_t fr = shift(knights & ~FILE_H_MASK, 17) & ~playerOccupancy;
-	addMoves(fr, -17, moves);
+	addMoves(fr, -17, enemyOccupancy, moves);
 	bitboard_t rf = shift(knights & ~FILE_H_MASK & ~FILE_G_MASK, 10) & ~playerOccupancy;
-	addMoves(rf, -10, moves);
+	addMoves(rf, -10, enemyOccupancy, moves);
 	bitboard_t lb = shift(knights & ~FILE_A_MASK & ~FILE_B_MASK, -10) & ~playerOccupancy;
-	addMoves(lb, 10, moves);
+	addMoves(lb, 10, enemyOccupancy, moves);
 	bitboard_t bl = shift(knights & ~FILE_A_MASK, -17) & ~playerOccupancy;
-	addMoves(bl, 17, moves);
+	addMoves(bl, 17, enemyOccupancy, moves);
 	bitboard_t br = shift(knights & ~FILE_H_MASK, -15) & ~playerOccupancy;
-	addMoves(br, 15, moves);
+	addMoves(br, 15, enemyOccupancy, moves);
 	bitboard_t rb = shift(knights & ~FILE_H_MASK & ~FILE_G_MASK, -6) & ~playerOccupancy;
-	addMoves(rb, 6, moves);
+	addMoves(rb, 6, enemyOccupancy, moves);
 }
 
 void BishopMoves(bitboard_t bishops, bitboard_t playerOccupancy, bitboard_t enemyOccupancy,
@@ -181,28 +190,28 @@ void BishopMoves(bitboard_t bishops, bitboard_t playerOccupancy, bitboard_t enem
 	bitboard_t bb = bishops;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb & ~FILE_A_MASK, 7) & ~playerOccupancy;
-		addMoves(bb, -7 * i, moves);
+		addMoves(bb, -7 * i, enemyOccupancy, moves);
 		bb &= ~enemyOccupancy;
 	}
 
 	bb = bishops;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb & ~FILE_H_MASK, 9) & ~playerOccupancy;
-		addMoves(bb, -9 * i, moves);
+		addMoves(bb, -9 * i, enemyOccupancy, moves);
 		bb &= ~enemyOccupancy;
 	}
 
 	bb = bishops;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb & ~FILE_A_MASK, -9) & ~playerOccupancy;
-		addMoves(bb, 9 * i, moves);
+		addMoves(bb, 9 * i, enemyOccupancy, moves);
 		bb &= ~enemyOccupancy;
 	}
 
 	bb = bishops;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb & ~FILE_H_MASK, -7) & ~playerOccupancy;
-		addMoves(bb, 7 * i, moves);
+		addMoves(bb, 7 * i, enemyOccupancy, moves);
 		bb &= ~enemyOccupancy;
 	}
 }
@@ -212,28 +221,28 @@ void RookMoves(bitboard_t rooks, bitboard_t playerOccupancy, bitboard_t enemyOcc
 	bitboard_t bb = rooks;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb, 8) & ~playerOccupancy;
-		addMoves(bb, -8 * i, moves);
+		addMoves(bb, -8 * i, enemyOccupancy, moves);
 		bb &= ~enemyOccupancy;
 	}
 
 	bb = rooks;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb & ~FILE_H_MASK, 1) & ~playerOccupancy;
-		addMoves(bb, -1 * i, moves);
+		addMoves(bb, -1 * i, enemyOccupancy, moves);
 		bb &= ~enemyOccupancy;
 	}
 
 	bb = rooks;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb, -8) & ~playerOccupancy;
-		addMoves(bb, 8 * i, moves);
+		addMoves(bb, 8 * i, enemyOccupancy, moves);
 		bb &= ~enemyOccupancy;
 	}
 
 	bb = rooks;
 	for (int i = 1; i < 8 && bb != 0; i++) {
 		bb = shift(bb & ~FILE_A_MASK, -1) & ~playerOccupancy;
-		addMoves(bb, 1 * i, moves);
+		addMoves(bb, 1 * i, enemyOccupancy, moves);
 		bb &= ~enemyOccupancy;
 	}
 }
@@ -247,15 +256,17 @@ void QueenMoves(bitboard_t queens, bitboard_t playerOccupancy, bitboard_t enemyO
 void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves) {
 	bitboard_t king = board.getBitboard(player, piece_t::king);
 	bitboard_t playerOccupancy = board.occupancyMap(player);
+	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
 	assert(king != 0 && king == (king & -king)); // only one king
-	addMoves(shift(king, 8) & ~playerOccupancy, -8, moves);
-	addMoves(shift(king, -8) & ~playerOccupancy, 8, moves);
-	addMoves(shift(king & ~FILE_A_MASK, 7) & ~playerOccupancy, -7, moves);
-	addMoves(shift(king & ~FILE_H_MASK, 9) & ~playerOccupancy, -9, moves);
-	addMoves(shift(king & ~FILE_H_MASK, 1) & ~playerOccupancy, -1, moves);
-	addMoves(shift(king & ~FILE_A_MASK, -1) & ~playerOccupancy, 1, moves);
-	addMoves(shift(king & ~FILE_H_MASK, -7) & ~playerOccupancy, 7, moves);
-	addMoves(shift(king & ~FILE_A_MASK, -9) & ~playerOccupancy, 9, moves);
+
+	addMoves(shift(king, 8) & ~playerOccupancy, -8, enemyOccupancy, moves);
+	addMoves(shift(king, -8) & ~playerOccupancy, 8, enemyOccupancy, moves);
+	addMoves(shift(king & ~FILE_A_MASK, 7) & ~playerOccupancy, -7, enemyOccupancy, moves);
+	addMoves(shift(king & ~FILE_H_MASK, 9) & ~playerOccupancy, -9, enemyOccupancy, moves);
+	addMoves(shift(king & ~FILE_H_MASK, 1) & ~playerOccupancy, -1, enemyOccupancy, moves);
+	addMoves(shift(king & ~FILE_A_MASK, -1) & ~playerOccupancy, 1, enemyOccupancy, moves);
+	addMoves(shift(king & ~FILE_H_MASK, -7) & ~playerOccupancy, 7, enemyOccupancy, moves);
+	addMoves(shift(king & ~FILE_A_MASK, -9) & ~playerOccupancy, 9, enemyOccupancy, moves);
 
 	player_t otherPlayer = OtherPlayer(player);
 	uint8_t from = ffsll(king) - 1;
