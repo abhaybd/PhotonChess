@@ -17,14 +17,19 @@ Include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Logging with Loguru
+# Logging with Loguru (wrap in function to limit scope)
 
-FetchContent_Declare(LoguruGitRepo
-	GIT_REPOSITORY "https://github.com/emilk/loguru" # can be a filesystem path
-	GIT_TAG        "master"
-)
-FetchContent_MakeAvailable(LoguruGitRepo) # defines target 'loguru::loguru'
-link_libraries(loguru::loguru -ldl)
+function(add_loguru)
+    FetchContent_Declare(LoguruGitRepo
+        GIT_REPOSITORY "https://github.com/emilk/loguru" # can be a filesystem path
+        GIT_TAG        "master"
+    )
+    set(BUILD_SHARED_LIBS ON)
+    set(LOGURU_STACKTRACES ON)
+    FetchContent_MakeAvailable(LoguruGitRepo) # defines target 'loguru::loguru'
+endfunction()
+add_loguru()
+
 
 # Testing
 
@@ -36,7 +41,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_library(photon_core STATIC)
+add_library(photon_core SHARED)
 add_library(Photon::Core ALIAS photon_core)
 target_sources(photon_core PRIVATE
     src/core.cpp
@@ -45,6 +50,15 @@ target_sources(photon_core PRIVATE
 )
 target_include_directories(photon_core PUBLIC "include")
 target_link_libraries(photon_core PRIVATE loguru::loguru)
+
+add_library(photon_engine SHARED)
+add_library(Photon::Engine ALIAS photon_engine)
+target_sources(photon_engine PRIVATE
+    src/eval.cpp
+)
+target_include_directories(photon_engine PUBLIC "include")
+target_link_libraries(photon_engine PUBLIC photon_core)
+target_link_libraries(photon_engine PRIVATE loguru::loguru)
 
 add_executable(photon src/main.cpp)
 target_link_libraries(photon photon_core)
