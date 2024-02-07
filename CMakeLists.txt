@@ -66,9 +66,11 @@ target_link_libraries(photon photon_core)
 add_executable(tests
     test/CoreTest.cpp
     test/MoveGenTest.cpp
+    test/EngineTest.cpp
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain
     photon_core
+    photon_engine
 )
 target_include_directories(tests PRIVATE "include")
