@@ -54,7 +54,8 @@ target_link_libraries(photon_core PRIVATE loguru::loguru)
 add_library(photon_engine SHARED)
 add_library(Photon::Engine ALIAS photon_engine)
 target_sources(photon_engine PRIVATE
-    src/eval.cpp
+    src/engine/eval.cpp
+    src/engine/heuristic.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)

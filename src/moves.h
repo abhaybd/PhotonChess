@@ -1,3 +1,5 @@
+#pragma once
+
 #include "photon/core.h"
 
 namespace photon::util {

@@ -11,7 +11,6 @@ namespace photon::engine {
 namespace {
 
 constexpr float CHECKMATE_SCORE = 10000.0f;
-constexpr std::array<float, 6> PIECE_VALUES = {1.0f, 3.0f, 3.0f, 5.0f, 9.0f, 0.0f};
 
 bool operator<(const evaluation_t& a, const evaluation_t& b) {
 	return a.score < b.score;
@@ -62,19 +61,6 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 }
 
 } // namespace
-
-float PositionHeuristic(const board_t& board) {
-	// TODO: improve heuristic function
-	player_t player = board.playerToMove();
-	float score = 0.0f;
-	for (piece_t p : ALL_PIECES) {
-		int wPieces = __builtin_popcountll(board.getBitboard(player, p));
-		int bPieces = __builtin_popcountll(board.getBitboard(OtherPlayer(player), p));
-		score += PIECE_VALUES[static_cast<int>(p)] * wPieces;
-		score -= PIECE_VALUES[static_cast<int>(p)] * bPieces;
-	}
-	return score;
-}
 
 evaluation_t EvalBoard(const board_t& board, int depth) {
 	// TODO: add iterative deepening
