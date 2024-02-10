@@ -30,6 +30,20 @@ function(add_loguru)
 endfunction()
 add_loguru()
 
+# UCI Library
+function(add_uci)
+    FetchContent_Declare(
+        UCI
+        GIT_REPOSITORY https://github.com/andersfylling/uci.git
+        GIT_TAG master
+    )
+    set(CMAKE_CXX_FLAGS) # disable warnings for uci
+    FetchContent_MakeAvailable(UCI)
+    target_link_libraries(uci -lpthread) # needs threading
+    # add header directory to include path
+    target_include_directories(uci PUBLIC ${uci_SOURCE_DIR}/include)
+endfunction()
+add_uci()
 
 # Testing
 
@@ -61,8 +75,9 @@ target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
 target_link_libraries(photon_engine PRIVATE loguru::loguru)
 
-add_executable(photon src/main.cpp)
-target_link_libraries(photon photon_core)
+add_executable(photon src/photon_main.cpp)
+target_link_libraries(photon photon_core photon_engine loguru::loguru)
+target_link_libraries(photon uci)
 
 add_executable(tests
     test/CoreTest.cpp
