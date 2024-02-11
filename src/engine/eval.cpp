@@ -37,7 +37,11 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 		} else if (result == result_t::draw) {
 			return {result, 0.0f, {}};
 		} else {
-			return {result, PositionHeuristic(board), {}};
+			float score = PositionHeuristic(board);
+			if (player == player_t::black) {
+				score = -score;
+			}
+			return {result, score, {}};
 		}
 	}
 

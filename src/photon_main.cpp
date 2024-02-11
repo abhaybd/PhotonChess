@@ -22,10 +22,10 @@ void uciCommand(const uci::arguments_t&) {
 	std::cout << "uciok" << std::endl;
 }
 
-void newUCICommand(const uci::arguments_t&) {
-	LOG_F(INFO, "Received command: new uci");
+void newGameCommand(const uci::arguments_t&) {
+	LOG_F(INFO, "Received command: ucinewgame");
 	board.reset();
-	// std::cout << "readyok" << std::endl;
+	// TODO: reset any other board state once added
 }
 
 void positionCommand(const uci::arguments_t& args) {
@@ -75,18 +75,17 @@ void goCommand(const uci::arguments_t& args) {
 	auto result = engine::EvalBoard(*board, depth);
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
+	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
 
 	int score = static_cast<int>(result.score * 100);
-    std::stringstream ss;
-    ss << "info depth " << result.moves.size() << " score cp " << score << " pv ";
-    for (size_t i = 0; i < result.moves.size(); i++) {
-        ss << util::MoveToUCI(result.moves[i]);
-        if (i != result.moves.size() - 1) {
-            ss << " ";
-        }
-    }
-    LOG_F(INFO, "Sending info: %s", ss.str().c_str());
+	std::stringstream ss;
+	ss << "info depth " << result.moves.size() << " multipv 1 score cp " << score
+	   << " nodes 0 nps 0 time " << elapsedMillis.count() << " pv";
+	for (move_t move : result.moves) {
+		ss << " " << util::MoveToUCI(move);
+	}
+	LOG_F(INFO, "Sending info: %s", ss.str().c_str());
 	std::cout << ss.str() << std::endl;
 	std::cout << "bestmove " << util::MoveToUCI(result.moves[0]) << std::endl;
 }
@@ -97,10 +96,10 @@ void isReadyCommand(const uci::arguments_t&) {
 }
 
 int main(int argc, char** argv) {
-    loguru::g_preamble_thread = false;
-    loguru::g_preamble_date = false;
-    loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
-    loguru::add_file("photonlog.txt", loguru::Truncate, loguru::Verbosity_MAX);
+	loguru::g_preamble_thread = false;
+	loguru::g_preamble_date = false;
+	loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
+	loguru::add_file("photonlog.txt", loguru::Truncate, loguru::Verbosity_MAX);
 	loguru::init(argc, argv);
 	LOG_F(INFO, "Photon started");
 
@@ -108,9 +107,11 @@ int main(int argc, char** argv) {
 
 	listener.addListener(uci::event::UCI, uciCommand);
 	listener.addListener(uci::event::POSITION, positionCommand);
-	listener.addListener(uci::event::UCINEWGAME, newUCICommand);
+	listener.addListener(uci::event::UCINEWGAME, newGameCommand);
 	listener.addListener(uci::event::ISREADY, isReadyCommand);
 	listener.addListener(uci::event::GO, goCommand);
+	listener.addListener(uci::event::QUIT,
+						 [&](const uci::arguments_t&) { listener.stopListening(); });
 
 	listener.setupListener();
 
