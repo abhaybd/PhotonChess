@@ -10,7 +10,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -flto -DNDEBUG")
 
 include(GNUInstallDirs)
 Include(FetchContent)
@@ -55,7 +55,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_library(photon_core SHARED)
+add_library(photon_core STATIC)
 add_library(Photon::Core ALIAS photon_core)
 target_sources(photon_core PRIVATE
     src/core.cpp
@@ -65,7 +65,7 @@ target_sources(photon_core PRIVATE
 target_include_directories(photon_core PUBLIC "include")
 target_link_libraries(photon_core PRIVATE loguru::loguru)
 
-add_library(photon_engine SHARED)
+add_library(photon_engine STATIC)
 add_library(Photon::Engine ALIAS photon_engine)
 target_sources(photon_engine PRIVATE
     src/engine/eval.cpp

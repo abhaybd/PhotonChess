@@ -13,11 +13,21 @@ namespace {
 constexpr float CHECKMATE_SCORE = 10000.0f;
 
 bool operator<(const evaluation_t& a, const evaluation_t& b) {
-	return a.score < b.score;
+	if (a.score != b.score) {
+		return a.score < b.score;
+	}
+	// choose shorter variation if winning, if losing choose longer
+	if (a.score >= 0) {
+		return a.moves.size() > b.moves.size();
+	} else {
+		return a.moves.size() < b.moves.size();
+	}
 }
 
-evaluation_t operator-(const evaluation_t& a) {
-	return {a.result, -a.score, a.moves};
+evaluation_t operator-(evaluation_t&& a) {
+	evaluation_t ret = std::move(a);
+	ret.score = -ret.score;
+	return ret;
 }
 
 void OrderMoves(const board_t&, std::vector<move_t>&) {

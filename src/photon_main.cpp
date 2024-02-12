@@ -78,10 +78,18 @@ void goCommand(const uci::arguments_t& args) {
 	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
 
-	int score = static_cast<int>(result.score * 100);
 	std::stringstream ss;
-	ss << "info depth " << result.moves.size() << " multipv 1 score cp " << score
-	   << " nodes 0 nps 0 time " << elapsedMillis.count() << " pv";
+	ss << "info depth " << depth << " multipv 1 nodes 0 nps 0 time " << elapsedMillis.count()
+	   << " score ";
+	if (result.result == util::WinResult(board->playerToMove())) {
+		ss << "mate " << result.moves.size();
+	} else if (result.result == util::WinResult(util::OtherPlayer(board->playerToMove()))) {
+		ss << "mate -" << result.moves.size();
+	} else {
+		int score = static_cast<int>(result.score * 100.0f);
+		ss << "cp " << score;
+	}
+	ss << " pv";
 	for (move_t move : result.moves) {
 		ss << " " << util::MoveToUCI(move);
 	}
