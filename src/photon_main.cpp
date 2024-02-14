@@ -72,15 +72,18 @@ void goCommand(const uci::arguments_t& args) {
 	CHECK_F(args.find("infinite") == args.end(), "Infinite search not supported");
 
 	auto start = std::chrono::high_resolution_clock::now();
-	auto result = engine::EvalBoard(*board, depth);
+	auto [result, metrics] = engine::EvalBoard(*board, depth);
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
 
 	std::stringstream ss;
-	ss << "info depth " << depth << " multipv 1 nodes 0 nps 0 time " << elapsedMillis.count()
-	   << " score ";
+	ss << "info multipv 1";
+	ss << " depth " << depth;
+	ss << " nodes " << metrics.nodes << " nps "
+	   << static_cast<int>(metrics.nodes / elapsed.count());
+	ss << " time " << elapsedMillis.count() << " score ";
 	if (result.result == util::WinResult(board->playerToMove())) {
 		ss << "mate " << result.moves.size();
 	} else if (result.result == util::WinResult(util::OtherPlayer(board->playerToMove()))) {

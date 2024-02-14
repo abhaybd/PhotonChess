@@ -34,7 +34,11 @@ void OrderMoves(const board_t&, std::vector<move_t>&) {
 	// TODO: implement move ordering
 }
 
-evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, float beta) {
+evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, float beta,
+					 evalmetrics_t& metrics) {
+	// update metrics
+	metrics.nodes++;
+
 	// TODO: add transposition table
 	// TODO: add quiescence search
 	player_t player = board.playerToMove();
@@ -61,7 +65,7 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 	evaluation_t best = {result, std::numeric_limits<float>::lowest(), {}};
 	for (move_t m : moves) {
 		board_t child = board.doMoveCopy(m);
-		auto candidate = -negamax(child, depth - 1, plies + 1, -beta, -alpha);
+		auto candidate = -negamax(child, depth - 1, plies + 1, -beta, -alpha, metrics);
 		if (best < candidate) {
 			best = std::move(candidate);
 			best.moves.push_back(m);
@@ -76,14 +80,15 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 
 } // namespace
 
-evaluation_t EvalBoard(const board_t& board, int depth) {
+std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth) {
 	// TODO: add iterative deepening
+	evalmetrics_t metrics;
 	float alpha = std::numeric_limits<float>::lowest();
 	float beta = std::numeric_limits<float>::max();
-	auto eval = negamax(board, depth, 0, alpha, beta);
+	evaluation_t eval = negamax(board, depth, 0, alpha, beta, metrics);
 	std::vector<move_t> moves(eval.moves.crbegin(), eval.moves.crend());
 	eval.moves = std::move(moves);
-	return eval;
+	return std::make_pair(eval, metrics);
 }
 
 } // namespace photon::engine
