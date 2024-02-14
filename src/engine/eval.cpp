@@ -1,9 +1,8 @@
 #include "photon/engine/eval.h"
 
+#include "move_ordering.h"
 #include "photon/core.h"
 #include "photon/util.h"
-
-#include <loguru.hpp>
 
 using namespace photon::util;
 
@@ -28,10 +27,6 @@ evaluation_t operator-(evaluation_t&& a) {
 	evaluation_t ret = std::move(a);
 	ret.score = -ret.score;
 	return ret;
-}
-
-void OrderMoves(const board_t&, std::vector<move_t>&) {
-	// TODO: implement move ordering
 }
 
 evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, float beta,
@@ -60,10 +55,11 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 	}
 
 	std::vector<move_t> moves = board.moves();
-	OrderMoves(board, moves);
+	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves);
 
 	evaluation_t best = {result, std::numeric_limits<float>::lowest(), {}};
-	for (move_t m : moves) {
+	for (size_t i = 0; i < scoredMoves.size(); i++) {
+		move_t m = SelectMove(scoredMoves, i);
 		board_t child = board.doMoveCopy(m);
 		auto candidate = -negamax(child, depth - 1, plies + 1, -beta, -alpha, metrics);
 		if (best < candidate) {

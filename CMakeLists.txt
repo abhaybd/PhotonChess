@@ -70,6 +70,7 @@ add_library(Photon::Engine ALIAS photon_engine)
 target_sources(photon_engine PRIVATE
     src/engine/eval.cpp
     src/engine/heuristic.cpp
+    src/engine/move_ordering.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
