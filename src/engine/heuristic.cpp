@@ -3,7 +3,7 @@
 #include "pst.h"
 
 #include <array>
-#include <cassert>
+#include <loguru.hpp>
 #include <strings.h>
 #include <utility>
 
@@ -14,13 +14,13 @@ constexpr std::array<int, 6> PHASE_SCORE = {0, 1, 1, 2, 4, 0};
 
 float PieceScore(const board_t& board, player_t player, piece_t piece, const pst_t& pst,
 				 float phase) {
-	assert(phase >= 0.0f && phase <= 1.0f);
+	DCHECK_F(phase >= 0.0f && phase <= 1.0f);
 	bitboard_t bb = board.getBitboard(player, piece);
 	float score = 0.0f;
 	while (bb) {
 		int idx = ffsll(bb) - 1;
-        // clever trick to flip the board
-        int sq = player_t::white == player ? idx : idx ^ 56;
+		// clever trick to flip the board
+		int sq = player_t::white == player ? idx : idx ^ 56;
 		score += pst[sq].first * (1.0f - phase) + pst[sq].second * phase;
 		bb &= ~(1ULL << idx);
 	}
@@ -35,7 +35,7 @@ float GetPhase(const board_t& board) {
 						board.getBitboard(player_t::black, piece);
 		phaseScore += PHASE_SCORE[i] * __builtin_popcountll(bb);
 	}
-    int phaseInt = 24 - std::min(phaseScore, 24);
+	int phaseInt = 24 - std::min(phaseScore, 24);
 	float phase = static_cast<float>(phaseInt) / 24.0f;
 	return std::min(std::max(phase, 0.0f), 1.0f);
 }

@@ -3,7 +3,6 @@
 #include "moves.h"
 #include "photon/util.h"
 
-#include <assert.h>
 #include <charconv>
 #include <loguru.hpp>
 #include <sstream>
@@ -167,7 +166,7 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 }
 
 board_t& board_t::doMove(move_t move) {
-	assert(move.getPlayer(*this) == playerToMove());
+	DCHECK_F(move.getPlayer(*this) == playerToMove());
 	player_t player = playerToMove();
 
 	// get data from move before mutating this
@@ -179,8 +178,8 @@ board_t& board_t::doMove(move_t move) {
 	auto promotion = move.getPromotion();
 
 	if (captured && !isEP) {
-		assert(move.isCapture);
-		assert(getBitboard(OtherPlayer(player), *captured) & (1ULL << move.to));
+		DCHECK_F(move.isCapture);
+		DCHECK_F((getBitboard(OtherPlayer(player), *captured) & (1ULL << move.to)) != 0);
 		getBitboard(OtherPlayer(player), *captured) &= ~(1ULL << move.to);
 
 		// remove castling rights if rook is captured
@@ -342,7 +341,7 @@ bool move_t::isEnPassant(const board_t& board) const {
 
 player_t move_t::getPlayer(const board_t& board) const {
 	player_t player = board.playerToMove();
-	assert(CheckOccupancy(board.occupancyMap(player), from));
+	DCHECK_F(CheckOccupancy(board.occupancyMap(player), from));
 	return player;
 }
 

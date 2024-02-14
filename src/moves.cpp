@@ -2,7 +2,6 @@
 
 #include "photon/util.h"
 
-#include <assert.h>
 #include <loguru.hpp>
 #include <strings.h>
 
@@ -36,7 +35,7 @@ T shift(T x, int shift) {
 void addMoves(bitboard_t bb, int offset, bool isCapture, std::vector<move_t>& moves) {
 	while (bb != 0) {
 		int idx = ffsll(bb) - 1;
-		assert(idx >= 0);
+		DCHECK_F(idx >= 0);
 		uint8_t from = idx + offset;
 		uint8_t to = idx;
 		moves.push_back({from, to, -1, isCapture});
@@ -53,7 +52,7 @@ void addMoves(bitboard_t bb, int offset, bitboard_t enemyOccupancy,
 void addPromotions(bitboard_t bb, int offset, bool isCapture, std::vector<move_t>& moves) {
 	while (bb != 0) {
 		int idx = ffsll(bb) - 1;
-		assert(idx >= 0);
+		DCHECK_F(idx >= 0);
 		uint8_t from = idx + offset;
 		uint8_t to = idx;
 		for (piece_t p : {piece_t::queen, piece_t::rook, piece_t::bishop, piece_t::knight}) {
@@ -257,7 +256,7 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 	bitboard_t king = board.getBitboard(player, piece_t::king);
 	bitboard_t playerOccupancy = board.occupancyMap(player);
 	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
-	assert(king != 0 && king == (king & -king)); // only one king
+	DCHECK_F(king != 0 && king == (king & -king)); // only one king
 
 	addMoves(shift(king, 8) & ~playerOccupancy, -8, enemyOccupancy, moves);
 	addMoves(shift(king, -8) & ~playerOccupancy, 8, enemyOccupancy, moves);
@@ -276,18 +275,18 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 		bitboard_t castleQMask = player == player_t::white ? CASTLE_Q_MASK_W : CASTLE_Q_MASK_B;
 		if (board.hasCastlingRights(player, castle_t::king) &&
 			(occupancy & castleKMask) == 0) {
-			assert(from == (player == player_t::white ? 4 : 60));
-			assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
-								  player == player_t::white ? 7 : 63));
+			DCHECK_F(from == (player == player_t::white ? 4 : 60));
+			DCHECK_F(CheckOccupancy(board.getBitboard(player, piece_t::rook),
+									player == player_t::white ? 7 : 63));
 			if (!IsAnyAttacked(board, castleKMask, otherPlayer)) {
 				moves.push_back(move_t{from, player == player_t::white ? 6_uc : 62_uc});
 			}
 		}
 		if (board.hasCastlingRights(player, castle_t::queen) &&
 			(occupancy & castleQMask) == 0) {
-			assert(from == (player == player_t::white ? 4 : 60));
-			assert(CheckOccupancy(board.getBitboard(player, piece_t::rook),
-								  player == player_t::white ? 0 : 56));
+			DCHECK_F(from == (player == player_t::white ? 4 : 60));
+			DCHECK_F(CheckOccupancy(board.getBitboard(player, piece_t::rook),
+									player == player_t::white ? 0 : 56));
 			if (!IsAnyAttacked(board, castleQMask, otherPlayer)) {
 				moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
 			}
