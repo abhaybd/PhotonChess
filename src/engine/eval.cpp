@@ -3,6 +3,7 @@
 #include "move_ordering.h"
 #include "photon/core.h"
 #include "photon/util.h"
+#include "transposition_table.h"
 
 #include <limits>
 #include <loguru.hpp>
@@ -10,9 +11,15 @@
 using namespace photon::util;
 
 namespace photon::engine {
+
+struct evalstate_t {
+	transposition_table_t ttable;
+};
+
 namespace {
 
 constexpr float CHECKMATE_SCORE = 10000.0f;
+constexpr size_t TTABLE_SIZE = 1ULL << 20;
 
 bool operator<(const evaluation_t& a, const evaluation_t& b) {
 	return a.score < b.score;
@@ -25,14 +32,34 @@ evaluation_t operator-(evaluation_t&& a) {
 }
 
 evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, float beta,
-					 evalmetrics_t& metrics) {
+					 evalmetrics_t& metrics, evalstate_t& state) {
 	// update metrics
 	metrics.nodes++;
 
-	// TODO: add transposition table
-	// TODO: add quiescence search
 	player_t player = board.playerToMove();
 	result_t result = board.result();
+
+	auto tt_entry = state.ttable.get(board);
+	float original_alpha = alpha;
+	if (tt_entry && tt_entry->depth >= depth) {
+		switch (tt_entry->type) {
+			case transposition_table_t::entry_type_t::exact:
+				return evaluation_t{result, tt_entry->score, {tt_entry->best_move}};
+
+			case transposition_table_t::entry_type_t::lower_bound:
+				alpha = std::max(alpha, tt_entry->score);
+				break;
+
+			case transposition_table_t::entry_type_t::upper_bound:
+				beta = std::min(beta, tt_entry->score);
+				break;
+		}
+		if (alpha >= beta) {
+			return {result, tt_entry->score, {tt_entry->best_move}};
+		}
+	}
+
+	// TODO: add quiescence search
 	if (depth == 0 || result != result_t::none) {
 		if (result == result_t::none) {
 			float score = PositionHeuristic(board);
@@ -57,7 +84,7 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
 		board_t child = board.doMoveCopy(m);
-		auto candidate = -negamax(child, depth - 1, plies + 1, -beta, -alpha, metrics);
+		auto candidate = -negamax(child, depth - 1, plies + 1, -beta, -alpha, metrics, state);
 		if (best < candidate) {
 			best = std::move(candidate);
 			best.moves.push_back(m);
@@ -67,20 +94,45 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 			break;
 		}
 	}
+
+	transposition_table_t::entry_type_t entry_type;
+	if (best.score <= original_alpha) {
+		entry_type = transposition_table_t::entry_type_t::upper_bound;
+	} else if (best.score >= beta) {
+		entry_type = transposition_table_t::entry_type_t::lower_bound;
+	} else {
+		entry_type = transposition_table_t::entry_type_t::exact;
+	}
+	state.ttable.set(board, depth, best.score, entry_type, best.moves[0]);
+
 	return best;
 }
 
 } // namespace
 
-std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth) {
+void evalstate_deleter_t::operator()(evalstate_t* state) const {
+	delete state;
+}
+
+evalstate_ptr_t CreateEvalState() {
+	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE)});
+}
+
+std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth,
+												 evalstate_t& state) {
 	// TODO: add iterative deepening
 	evalmetrics_t metrics;
 	float alpha = std::numeric_limits<float>::lowest();
 	float beta = std::numeric_limits<float>::max();
-	evaluation_t eval = negamax(board, depth, 0, alpha, beta, metrics);
+	evaluation_t eval = negamax(board, depth, 0, alpha, beta, metrics, state);
 	std::vector<move_t> moves(eval.moves.crbegin(), eval.moves.crend());
 	eval.moves = std::move(moves);
 	return std::make_pair(eval, metrics);
+}
+
+std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth) {
+	auto state = CreateEvalState();
+	return EvalBoard(board, depth, *state);
 }
 
 } // namespace photon::engine

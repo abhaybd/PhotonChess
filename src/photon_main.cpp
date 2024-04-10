@@ -14,6 +14,7 @@ using namespace photon;
 
 const std::string VERSION = "0.1.0";
 std::unique_ptr<board_t> board;
+engine::evalstate_ptr_t eval_state;
 
 void uciCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: uci");
@@ -25,12 +26,14 @@ void uciCommand(const uci::arguments_t&) {
 void newGameCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: ucinewgame");
 	board.reset();
+	eval_state = engine::CreateEvalState();
 	// TODO: reset any other board state once added
 }
 
 void positionCommand(const uci::arguments_t& args) {
 	LOG_SCOPE_F(INFO, "Received command: position");
 	board.reset();
+	eval_state = engine::CreateEvalState();
 
 	auto fenIt = args.find("fen");
 	if (fenIt != args.end()) {
@@ -73,7 +76,7 @@ void goCommand(const uci::arguments_t& args) {
 	CHECK_F(args.find("infinite") == args.end(), "Infinite search not supported");
 
 	auto start = std::chrono::high_resolution_clock::now();
-	auto [result, metrics] = engine::EvalBoard(*board, depth);
+	auto [result, metrics] = engine::EvalBoard(*board, depth, *eval_state);
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
