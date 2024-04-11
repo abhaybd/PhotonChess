@@ -278,12 +278,8 @@ struct move_t {
 	 */
 	std::optional<piece_t> getPromotion() const;
 
-	/**
-	 * @brief Checks if two moves are equal.
-	 * @param other The other move to compare with
-	 * @return True if the moves are equal, false otherwise
-	 */
 	bool operator==(const move_t& other) const;
+	bool operator!=(const move_t& other) const;
 };
 
 } // namespace photon

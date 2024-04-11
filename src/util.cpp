@@ -24,6 +24,58 @@ std::vector<std::string_view> split(std::string_view s, char delim) {
 	return vec;
 }
 
+board_t MakeBoard(const std::vector<std::string_view>& parts) {
+	std::vector<std::string_view> rowsRev = split(parts[0], '/');
+	board_t board;
+
+	int squareIdx = 0;
+	for (auto it = rowsRev.crbegin(); it < rowsRev.crend(); ++it) {
+		for (char c : *it) {
+			if (std::isdigit(c)) {
+				squareIdx += c - '0';
+			} else {
+				bool isWhite = std::isupper(c);
+				if (!isWhite) {
+					c = std::toupper(c);
+				}
+
+				auto& arr = isWhite ? board.white : board.black;
+				piece_t p = CharToPiece(c);
+				arr[static_cast<int>(p)] |= 1ULL << squareIdx;
+				squareIdx++;
+			}
+		}
+	}
+
+	if (parts[1] == "b") {
+		board.metadata |= 1 << 4;
+	}
+
+	if (parts[2].find('K') != std::string_view::npos) {
+		board.metadata |= 1;
+	}
+	if (parts[2].find('Q') != std::string_view::npos) {
+		board.metadata |= 1 << 1;
+	}
+	if (parts[2].find('k') != std::string_view::npos) {
+		board.metadata |= 1 << 2;
+	}
+	if (parts[2].find('q') != std::string_view::npos) {
+		board.metadata |= 1 << 3;
+	}
+
+	board.enPassant = parts[3] == "-" ? -1 : ParseSquare(parts[3]);
+	auto halfmoveRet =
+		std::from_chars(parts[4].cbegin(), parts[4].cend(), board.halfmoveClock);
+	CHECK_F(halfmoveRet.ec == std::errc{}, "Unable to parse halfmove clock string: %s",
+			std::string(parts[4]).c_str());
+	auto fullmoveRet = std::from_chars(parts[5].cbegin(), parts[5].cend(), board.fullmove);
+	CHECK_F(fullmoveRet.ec == std::errc{}, "Unable to parse fullmove string: %s",
+			std::string(parts[5]).c_str());
+
+	return board;
+}
+
 } // namespace
 
 player_t OtherPlayer(player_t player) {
@@ -105,57 +157,24 @@ std::string SquareToString(uint8_t square) {
 	return s;
 }
 
+board_t MakeBoard(std::istream& stream) {
+	std::vector<std::string> parts_str;
+	for (int i = 0; i < 6; i++) {
+		std::string s;
+		stream >> s;
+		CHECK_F(!s.empty() && !stream.fail(), "Invalid FEN string");
+		parts_str.push_back(s);
+	}
+	std::vector<std::string_view> parts;
+	for (const std::string& s : parts_str) {
+		parts.push_back(s);
+	}
+	return MakeBoard(parts);
+}
+
 board_t MakeBoard(std::string_view fen) {
 	std::vector<std::string_view> parts = split(fen, ' ');
-	std::vector<std::string_view> rowsRev = split(parts[0], '/');
-
-	board_t board;
-
-	int squareIdx = 0;
-	for (auto it = rowsRev.crbegin(); it < rowsRev.crend(); ++it) {
-		for (char c : *it) {
-			if (std::isdigit(c)) {
-				squareIdx += c - '0';
-			} else {
-				bool isWhite = std::isupper(c);
-				if (!isWhite) {
-					c = std::toupper(c);
-				}
-
-				auto& arr = isWhite ? board.white : board.black;
-				piece_t p = CharToPiece(c);
-				arr[static_cast<int>(p)] |= 1ULL << squareIdx;
-				squareIdx++;
-			}
-		}
-	}
-
-	if (parts[1] == "b") {
-		board.metadata |= 1 << 4;
-	}
-
-	if (parts[2].find('K') != std::string_view::npos) {
-		board.metadata |= 1;
-	}
-	if (parts[2].find('Q') != std::string_view::npos) {
-		board.metadata |= 1 << 1;
-	}
-	if (parts[2].find('k') != std::string_view::npos) {
-		board.metadata |= 1 << 2;
-	}
-	if (parts[2].find('q') != std::string_view::npos) {
-		board.metadata |= 1 << 3;
-	}
-
-	board.enPassant = parts[3] == "-" ? -1 : ParseSquare(parts[3]);
-	auto halfmoveRet = std::from_chars(parts[4].begin(), parts[4].end(), board.halfmoveClock);
-	CHECK_F(halfmoveRet.ec == std::errc{}, "Unable to parse halfmove clock string: %s",
-			std::string(parts[4]).c_str());
-	auto fullmoveRet = std::from_chars(parts[5].begin(), parts[5].end(), board.fullmove);
-	CHECK_F(fullmoveRet.ec == std::errc{}, "Unable to parse fullmove string: %s",
-			std::string(parts[5]).c_str());
-
-	return board;
+	return MakeBoard(parts);
 }
 
 board_t DefaultBoard() {
@@ -199,6 +218,68 @@ move_t MoveFromLongNotation(player_t player, std::string_view longNotation) {
 	return move;
 }
 
+move_t MoveFromShortNotation(const board_t& board, std::string_view short_notation) {
+	player_t player = board.playerToMove();
+	if (short_notation == "O-O") {
+		if (player == player_t::white) {
+			return {ParseSquare("e1"), ParseSquare("g1")};
+		} else {
+			return {ParseSquare("e8"), ParseSquare("g8")};
+		}
+	} else if (short_notation == "O-O-O") {
+		if (player == player_t::white) {
+			return {ParseSquare("e1"), ParseSquare("c1")};
+		} else {
+			return {ParseSquare("e8"), ParseSquare("c8")};
+		}
+	} else {
+		std::regex regex("^([NBRQK][a-h1-8]?x?|[a-h]x)?([a-h][1-8])(?:=([NBRQ]))?[+#]?$");
+		std::match_results<std::string_view::const_iterator> m;
+		bool match =
+			std::regex_match(short_notation.cbegin(), short_notation.cend(), m, regex);
+		CHECK_F(match, "Invalid short notation: %s", std::string(short_notation).c_str());
+
+		uint8_t to = ParseSquare(m[2].str());
+		std::optional<piece_t> promotion;
+		if (!m[3].str().empty()) {
+			promotion = CharToPiece(m[3].str()[0]);
+		}
+
+		piece_t piece;
+		bool is_capture;
+		std::optional<char> disambiguator;
+		if (m[1].str().empty()) {
+			is_capture = false;
+			piece = piece_t::pawn;
+		} else {
+			std::string s = m[1];
+			is_capture = s.back() == 'x';
+			piece = std::islower(s[0]) ? piece_t::pawn : CharToPiece(s[0]);
+			if (piece != piece_t::pawn && (s.size() == 3 || (!is_capture && s.size() == 2))) {
+				disambiguator = s[1];
+			}
+		}
+
+		std::vector<move_t> moves = board.moves();
+		for (move_t move : moves) {
+			if (move.to == to && move.getPiece(board) == piece && move.isCapture == is_capture && move.getPromotion() == promotion) {
+				if (disambiguator) {
+					std::string square_str = SquareToString(move.from);
+					if (std::isalpha(*disambiguator) && square_str[0] == *disambiguator) {
+						return move;
+					} else if (std::isdigit(*disambiguator) && square_str[1] == *disambiguator) {
+						return move;
+					}
+				} else {
+					return move;
+				}
+			}
+		}
+		CHECK_F(false, "No matching move found for short notation: %s",
+				std::string(short_notation).c_str());
+	}
+}
+
 move_t MoveFromUCI(std::string_view uci, bool isCapture) {
 	CHECK_F(uci.size() == 4 || uci.size() == 5);
 	uint8_t from = ParseSquare(uci.substr(0, 2));
@@ -213,21 +294,56 @@ move_t MoveFromUCI(std::string_view uci, bool isCapture) {
 
 move_t MoveFromUCI(const board_t& board, std::string_view uci) {
 	move_t m = MoveFromUCI(uci);
-	player_t player = CheckOccupancy(board.occupancyMap(player_t::white), m.from) ? player_t::white : player_t::black;
+	player_t player = CheckOccupancy(board.occupancyMap(player_t::white), m.from)
+						  ? player_t::white
+						  : player_t::black;
 	CHECK_F(CheckOccupancy(board.occupancyMap(player), m.from));
 	m.isCapture = CheckOccupancy(board.occupancyMap(OtherPlayer(player)), m.to);
 	return m;
 }
 
 std::string MoveToLongNotation(board_t board, move_t move) {
-	piece_t p = move.getPiece(board);
 	std::stringstream ss;
-	if (p != piece_t::pawn) {
-		ss << PieceToChar(p);
+	if (move.isCastle(board, castle_t::king)) {
+		ss << "O-O";
+	} else if (move.isCastle(board, castle_t::queen)) {
+		ss << "O-O-O";
+	} else {
+		piece_t p = move.getPiece(board);
+		if (p != piece_t::pawn) {
+			ss << PieceToChar(p);
+		}
+		ss << SquareToString(move.from);
+		ss << (move.isCapture ? 'x' : '-');
+		ss << SquareToString(move.to);
+		if (move.isPromotion()) {
+			ss << '=' << PieceToChar(*move.getPromotion());
+		}
 	}
-	ss << SquareToString(move.from);
-	ss << (move.isCapture ? 'x' : '-');
-	ss << SquareToString(move.to);
+	return ss.str();
+}
+
+std::string MoveToShortNotation(const board_t& board, move_t move) {
+	std::stringstream ss;
+	if (move.isCastle(board, castle_t::king)) {
+		ss << "O-O";
+	} else if (move.isCastle(board, castle_t::queen)) {
+		ss << "O-O-O";
+	} else {
+		piece_t p = move.getPiece(board);
+		if (p != piece_t::pawn) {
+			ss << PieceToChar(p);
+			if (move.isCapture) {
+				ss << 'x';
+			}
+		} else if (move.isCapture) {
+			ss << SquareToString(move.from)[0] << 'x';
+		}
+		ss << SquareToString(move.to);
+		if (move.isPromotion()) {
+			ss << '=' << PieceToChar(*move.getPromotion());
+		}
+	}
 	return ss.str();
 }
 

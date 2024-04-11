@@ -80,6 +80,10 @@ add_executable(photon src/photon_main.cpp)
 target_link_libraries(photon photon_core photon_engine loguru::loguru)
 target_link_libraries(photon uci)
 
+add_executable(eret src/engine/ERET.cpp)
+target_link_libraries(eret photon_core photon_engine loguru::loguru)
+target_link_libraries(eret uci)
+
 add_executable(tests
     test/CoreTest.cpp
     test/MoveGenTest.cpp

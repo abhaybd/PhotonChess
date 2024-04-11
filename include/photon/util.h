@@ -2,6 +2,7 @@
 
 #include "photon/core.h"
 
+#include <istream>
 #include <vector>
 
 /**
@@ -61,6 +62,13 @@ uint8_t ParseSquare(std::string_view s);
 std::string SquareToString(uint8_t square);
 
 /**
+ * @brief Creates a board from a FEN string in a stream.
+ * @param stream A stream from which the FEN string will be read.
+ * @return The created board.
+ */
+board_t MakeBoard(std::istream& stream);
+
+/**
  * @brief Creates a board from a FEN string.
  * @param fen The FEN string.
  * @return The created board.
@@ -82,6 +90,16 @@ board_t DefaultBoard();
 move_t MoveFromLongNotation(player_t player, std::string_view longNotation);
 
 /**
+ * @brief Creates a move from short algebraic notation.
+ *
+ * @param board The current board. The move must be for the player whose turn it is.
+ * @param short_notation The short algebraic notation of the move, with disambiguation if
+ * necessary.
+ * @return move_t The created move.
+ */
+move_t MoveFromShortNotation(const board_t& board, std::string_view short_notation);
+
+/**
  * @brief Creates a move from UCI (Universal Chess Interface) notation.
  * @param uci The UCI notation of the move.
  * @param isCapture Whether the move is a capture.
@@ -99,11 +117,25 @@ move_t MoveFromUCI(const board_t& board, std::string_view uci);
 
 /**
  * @brief Converts a move to its long algebraic notation.
+ *
+ * Does not notate checks or checkmates.
+ *
  * @param board The current board.
  * @param move The move to convert.
  * @return The long algebraic notation of the move.
  */
 std::string MoveToLongNotation(board_t board, move_t move);
+
+/**
+ * @brief Converts a move to its short algebraic notation.
+ *
+ * Does not notate checks or checkmates.
+ *
+ * @param board The current board.
+ * @param move The move to convert.
+ * @return std::string The short algebraic notation of the move.
+ */
+std::string MoveToShortNotation(const board_t& board, move_t move);
 
 /**
  * @brief Converts a move to its UCI (Universal Chess Interface) notation.

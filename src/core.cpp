@@ -407,4 +407,8 @@ bool move_t::operator==(const move_t& other) const {
 	return from == other.from && to == other.to;
 }
 
+bool move_t::operator!=(const move_t& other) const {
+	return !(*this == other);
+}
+
 } // namespace photon
