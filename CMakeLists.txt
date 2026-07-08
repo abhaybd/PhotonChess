@@ -50,7 +50,7 @@ add_uci()
 FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG v3.4.0 # or a later release
+        GIT_TAG v3.15.2
 )
 
 FetchContent_MakeAvailable(Catch2)
@@ -77,11 +77,11 @@ target_link_libraries(photon_engine PUBLIC photon_core)
 target_link_libraries(photon_engine PRIVATE loguru::loguru)
 
 add_executable(photon src/photon_main.cpp)
-target_link_libraries(photon photon_core photon_engine loguru::loguru)
+target_link_libraries(photon photon_engine loguru::loguru)
 target_link_libraries(photon uci)
 
 add_executable(eret src/engine/ERET.cpp)
-target_link_libraries(eret photon_core photon_engine loguru::loguru)
+target_link_libraries(eret photon_engine loguru::loguru)
 target_link_libraries(eret uci)
 
 add_executable(tests
@@ -91,7 +91,6 @@ add_executable(tests
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain
-    photon_core
     photon_engine
 )
 target_include_directories(tests PRIVATE "include")

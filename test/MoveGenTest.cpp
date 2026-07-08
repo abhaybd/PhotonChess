@@ -2,7 +2,7 @@
 #include "photon/core.h"
 #include "photon/util.h"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace photon;
 using namespace photon::util;
