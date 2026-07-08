@@ -4,6 +4,8 @@
 #include "photon/core.h"
 #include "photon/util.h"
 
+#include <loguru.hpp>
+
 using namespace photon::util;
 
 namespace photon::engine {
@@ -39,18 +41,18 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 	player_t player = board.playerToMove();
 	result_t result = board.result();
 	if (depth == 0 || result != result_t::none) {
-		if (result == WinResult(player)) {
-			return {result, CHECKMATE_SCORE, {}};
-		} else if (result == WinResult(OtherPlayer(player))) {
-			return {result, -CHECKMATE_SCORE, {}};
-		} else if (result == result_t::draw) {
-			return {result, 0.0f, {}};
-		} else {
+		if (result == result_t::none) {
 			float score = PositionHeuristic(board);
 			if (player == player_t::black) {
 				score = -score;
 			}
 			return {result, score, {}};
+		} else if (result == WinResult(OtherPlayer(player))) {
+			return {result, -CHECKMATE_SCORE, {}};
+		} else if (result == result_t::draw) {
+			return {result, 0.0f, {}};
+		} else {
+			ABORT_F("Player to move cannot already have checkmate! result == WinResult(player)");
 		}
 	}
 
