@@ -68,6 +68,7 @@ void goCommand(const uci::arguments_t& args) {
 	if (args.find("depth") != args.end()) {
 		depth = std::stoi(args.at("depth"));
 	}
+	// TODO: think for time budget
 
 	CHECK_F(args.find("infinite") == args.end(), "Infinite search not supported");
 
@@ -110,7 +111,9 @@ int main(int argc, char** argv) {
 	loguru::g_preamble_thread = false;
 	loguru::g_preamble_date = false;
 	loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
-	loguru::add_file("photonlog.txt", loguru::Truncate, loguru::Verbosity_MAX);
+	if (std::getenv("PHOTON_DISABLE_LOGGING") == nullptr) {
+		loguru::add_file("photonlog.txt", loguru::Truncate, loguru::Verbosity_MAX);
+	}
 	loguru::init(argc, argv);
 	LOG_F(INFO, "Photon started");
 
