@@ -14,15 +14,7 @@ namespace {
 constexpr float CHECKMATE_SCORE = 10000.0f;
 
 bool operator<(const evaluation_t& a, const evaluation_t& b) {
-	if (a.score != b.score) {
-		return a.score < b.score;
-	}
-	// choose shorter variation if winning, if losing choose longer
-	if (a.score >= 0) {
-		return a.moves.size() > b.moves.size();
-	} else {
-		return a.moves.size() < b.moves.size();
-	}
+	return a.score < b.score;
 }
 
 evaluation_t operator-(evaluation_t&& a) {
@@ -48,7 +40,8 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 			}
 			return {result, score, {}};
 		} else if (result == WinResult(OtherPlayer(player))) {
-			return {result, -CHECKMATE_SCORE, {}};
+			// penalize mated positions by the number of plies to the checkmate
+			return {result, -CHECKMATE_SCORE + plies, {}};
 		} else if (result == result_t::draw) {
 			return {result, 0.0f, {}};
 		} else {
