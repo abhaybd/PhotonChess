@@ -293,7 +293,7 @@ move_t MoveFromUCI(std::string_view uci, bool isCapture) {
 }
 
 move_t MoveFromUCI(const board_t& board, std::string_view uci) {
-	move_t m = MoveFromUCI(uci);
+	move_t m = MoveFromUCI(uci, false);
 	player_t player = CheckOccupancy(board.occupancyMap(player_t::white), m.from)
 						  ? player_t::white
 						  : player_t::black;

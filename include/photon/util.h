@@ -105,7 +105,7 @@ move_t MoveFromShortNotation(const board_t& board, std::string_view short_notati
  * @param isCapture Whether the move is a capture.
  * @return The created move.
  */
-move_t MoveFromUCI(std::string_view uci, bool isCapture = false);
+move_t MoveFromUCI(std::string_view uci, bool isCapture);
 
 /**
  * @brief Creates a move from UCI (Universal Chess Interface) notation.

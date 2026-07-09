@@ -173,6 +173,14 @@ TEST_CASE("Test doMove", "[core]") {
 	}
 }
 
+TEST_CASE("Test doMove promotion", "[core]") {
+	std::string fen = "r3k2r/6P1/8/8/8/8/1p6/R3K2R w - - 0 1";
+	board_t board = MakeBoard(fen);
+	board.doMove(MoveFromUCI(board, "g7h8n"));
+	board.doMove(MoveFromUCI(board, "b2a1q"));
+	REQUIRE(board.fen() == "r3k2N/8/8/8/8/8/8/q3K2R w - - 0 2");
+}
+
 TEST_CASE("Test move generation", "[core]") {
 	{
 		// white to move
