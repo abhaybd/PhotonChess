@@ -262,12 +262,14 @@ move_t MoveFromShortNotation(const board_t& board, std::string_view short_notati
 
 		std::vector<move_t> moves = board.moves();
 		for (move_t move : moves) {
-			if (move.to == to && move.getPiece(board) == piece && move.isCapture == is_capture && move.getPromotion() == promotion) {
+			if (move.to == to && move.getPiece(board) == piece &&
+				move.isCapture == is_capture && move.getPromotion() == promotion) {
 				if (disambiguator) {
 					std::string square_str = SquareToString(move.from);
 					if (std::isalpha(*disambiguator) && square_str[0] == *disambiguator) {
 						return move;
-					} else if (std::isdigit(*disambiguator) && square_str[1] == *disambiguator) {
+					} else if (std::isdigit(*disambiguator) &&
+							   square_str[1] == *disambiguator) {
 						return move;
 					}
 				} else {

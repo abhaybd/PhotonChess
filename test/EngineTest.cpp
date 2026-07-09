@@ -27,7 +27,7 @@ TEST_CASE("Test mate in 1 ply", "[engine]") {
 
 	std::vector<move_t> solution = {MoveFromUCI(board, "h5f7")};
 
-    REQUIRE(eval.result == result_t::white_wins);
+	REQUIRE(eval.result == result_t::white_wins);
 	assertMovesEqual(eval.moves, solution);
 }
 
@@ -36,12 +36,9 @@ TEST_CASE("Test mate in 3 ply", "[engine]") {
 		MakeBoard("r1bq2r1/b4pk1/p1pp1p2/1p2pP2/1P2P1PB/3P4/1PPQ2P1/R3K2R w KQ - 0 1");
 	evaluation_t eval = EvalBoard(board, 4).first;
 
-	std::vector<move_t> solution = {
-		MoveFromUCI(board, "d2h6"),
-		MoveFromUCI(board, "g7h6"),
-		MoveFromUCI(board, "h4f6")
-	};
+	std::vector<move_t> solution = {MoveFromUCI(board, "d2h6"), MoveFromUCI(board, "g7h6"),
+									MoveFromUCI(board, "h4f6")};
 
-    REQUIRE(eval.result == result_t::white_wins);
+	REQUIRE(eval.result == result_t::white_wins);
 	assertMovesEqual(eval.moves, solution);
 }
