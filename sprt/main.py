@@ -1,3 +1,9 @@
+"""
+SPRT utility for Photon.
+This tool runs SPRT on two commits to test if there is a performance difference between them:
+This will print a lot of output, and at the end if it prints H0 or H1 are accepted, it means respectively that the engines are not significantly different, or they are. SPRT results are persisted under `results/` in a json.
+"""
+
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -9,20 +15,23 @@ import subprocess
 from git import Repo
 
 def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("commit1")
-    parser.add_argument("commit2")
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("new_commit", help="The revision with the new changes")
+    parser.add_argument("old_commit", help="The revision with the old changes to test against")
     parser.add_argument("--builds-dir", type=Path, default=Path("builds"))
 
-    parser.add_argument("--fastchess", type=Path, default=Path("bin/fastchess/fastchess"))
-    parser.add_argument("--opening-book", type=Path, default=Path("bin/8moves_v3.pgn"))
-    parser.add_argument("--rounds", type=int, default=15000)
-    parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count())
-    parser.add_argument("-a", "--alpha", type=float, default=0.05)
-    parser.add_argument("-b", "--beta", type=float, default=0.05)
-    parser.add_argument("--elo-delta", type=float, default=5.0)
+    parser.add_argument("--fastchess", type=Path, default=Path("bin/fastchess/fastchess"), help="Path to the fastchess executable")
+    parser.add_argument("--opening-book", type=Path, default=Path("bin/8moves_v3.pgn"), help="Path to the PGN opening book")
+    parser.add_argument("--rounds", type=int, default=15000, help="Number of rounds to run")
+    parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count(), help="Number of concurrent jobs to run")
+    parser.add_argument("-a", "--alpha", type=float, default=0.05, help="Alpha level for SPRT")
+    parser.add_argument("-b", "--beta", type=float, default=0.05, help="Beta level for SPRT")
+    parser.add_argument("--elo-delta", type=float, default=5.0, help="Elo delta for SPRT (nElo if normalized, Elo if logistic)")
     parser.add_argument("--time-control", default="8+0.08")
-    parser.add_argument("--sprt-model", default="logistic", choices=["normalized", "logistic"])
+    parser.add_argument("--sprt-model", default="logistic", choices=["normalized", "logistic"], help="SPRT model to use")
     return parser.parse_args()
 
 def find_repo_root(path: Path) -> Path:
@@ -76,8 +85,8 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     with ThreadPoolExecutor(max_workers=2) as executor:
-        future1 = executor.submit(clone_and_build, builds_dir, args.commit1)
-        future2 = executor.submit(clone_and_build, builds_dir, args.commit2)
+        future1 = executor.submit(clone_and_build, builds_dir, args.new_commit)
+        future2 = executor.submit(clone_and_build, builds_dir, args.old_commit)
         commit1, executable1 = future1.result()
         commit2, executable2 = future2.result()
 
