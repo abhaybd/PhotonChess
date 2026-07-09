@@ -61,6 +61,7 @@ target_sources(photon_core PRIVATE
     src/core.cpp
     src/util.cpp
     src/moves.cpp
+    src/zobrist.cpp
 )
 target_include_directories(photon_core PUBLIC "include")
 target_link_libraries(photon_core PRIVATE loguru::loguru)
@@ -87,6 +88,7 @@ target_link_libraries(eret uci)
 add_executable(tests
     test/CoreTest.cpp
     test/MoveGenTest.cpp
+    test/UtilTest.cpp
     test/EngineTest.cpp
 )
 target_link_libraries(tests PRIVATE

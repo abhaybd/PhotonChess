@@ -1,5 +1,7 @@
 #include "photon/util.h"
 
+#include "zobrist.h"
+
 #include <charconv>
 #include <loguru.hpp>
 #include <regex>
@@ -72,6 +74,8 @@ board_t MakeBoard(const std::vector<std::string_view>& parts) {
 	auto fullmoveRet = std::from_chars(parts[5].cbegin(), parts[5].cend(), board.fullmove);
 	CHECK_F(fullmoveRet.ec == std::errc{}, "Unable to parse fullmove string: %s",
 			std::string(parts[5]).c_str());
+
+	board.hash = ZobristHash(board);
 
 	return board;
 }
@@ -179,6 +183,35 @@ board_t MakeBoard(std::string_view fen) {
 
 board_t DefaultBoard() {
 	return MakeBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+}
+
+uint64_t ZobristHash(const board_t& board) {
+	auto& zobrist = ZobristData();
+
+	uint64_t hash = 0;
+	for (player_t player : {player_t::white, player_t::black}) {
+		for (piece_t piece : ALL_PIECES) {
+			bitboard_t bb = board.getBitboard(player, piece);
+			while (bb != 0) {
+				int idx = ffsll(bb) - 1;
+				hash ^=
+					zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(piece)][idx];
+				bb &= bb - 1;
+			}
+		}
+	}
+	if (board.playerToMove() == player_t::black) {
+		hash ^= zobrist.playerKey;
+	}
+	for (int i = 0; i < 4; i++) {
+		if (board.metadata & (1 << i)) {
+			hash ^= zobrist.castleKeys[i];
+		}
+	}
+	if (board.enPassant >= 0) {
+		hash ^= zobrist.enPassantKeys[board.enPassant % 8];
+	}
+	return hash;
 }
 
 move_t MoveFromLongNotation(player_t player, std::string_view longNotation) {

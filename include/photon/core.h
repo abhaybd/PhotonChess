@@ -83,6 +83,8 @@ struct board_t {
 	uint8_t halfmoveClock;
 	/** Fullmove number */
 	int fullmove;
+	/** Board hash */
+	uint64_t hash;
 
 	/**
 	 * @brief Construct a new empty board.

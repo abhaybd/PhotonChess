@@ -82,6 +82,16 @@ board_t MakeBoard(std::string_view fen);
 board_t DefaultBoard();
 
 /**
+ * @brief Calculate the Zobrist hash of a board.
+ *
+ * @param board The board to hash.
+ * @return uint64_t The calculated hash.
+ *
+ * @see https://www.chessprogramming.org/Zobrist_Hashing
+ */
+uint64_t ZobristHash(const board_t& board);
+
+/**
  * @brief Creates a move from long algebraic notation.
  * @param player The player making the move.
  * @param longNotation The long algebraic notation of the move.

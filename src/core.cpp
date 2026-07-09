@@ -2,6 +2,7 @@
 
 #include "moves.h"
 #include "photon/util.h"
+#include "zobrist.h"
 
 #include <charconv>
 #include <loguru.hpp>
@@ -15,6 +16,7 @@ namespace photon {
 board_t::board_t() : metadata(0), enPassant(-1), halfmoveClock(0), fullmove(1) {
 	white.fill(0);
 	black.fill(0);
+	hash = ZobristHash(*this);
 }
 
 const std::array<bitboard_t, 6>& board_t::getBitboards(player_t player) const {
@@ -168,6 +170,7 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 board_t& board_t::doMove(move_t move) {
 	DCHECK_F(move.getPlayer(*this) == playerToMove());
 	player_t player = playerToMove();
+	player_t otherPlayer = OtherPlayer(player);
 
 	// get data from move before mutating this
 	piece_t piece = move.getPiece(*this);
@@ -176,11 +179,15 @@ board_t& board_t::doMove(move_t move) {
 	bool isQCastle = move.isCastle(*this, castle_t::queen);
 	bool isEP = move.isEnPassant(*this);
 	auto promotion = move.getPromotion();
+	uint8_t oldMetadata = metadata;
+	auto& zobrist = ZobristData();
 
 	if (captured && !isEP) {
 		DCHECK_F(move.isCapture);
-		DCHECK_F((getBitboard(OtherPlayer(player), *captured) & (1ULL << move.to)) != 0);
-		getBitboard(OtherPlayer(player), *captured) &= ~(1ULL << move.to);
+		DCHECK_F((getBitboard(otherPlayer, *captured) & (1ULL << move.to)) != 0);
+		getBitboard(otherPlayer, *captured) &= ~(1ULL << move.to);
+		hash ^= zobrist.pieceKeys[static_cast<int>(otherPlayer)][static_cast<int>(*captured)]
+								 [move.to];
 
 		// remove castling rights if rook is captured
 		if (*captured == piece_t::rook) {
@@ -197,34 +204,46 @@ board_t& board_t::doMove(move_t move) {
 	}
 	bitboard_t& bb = getBitboard(player, piece);
 	bb &= ~(1ULL << move.from);
+	hash ^= zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(piece)][move.from];
 
 	if (promotion) {
 		getBitboard(player, *promotion) |= 1ULL << move.to;
+		hash ^=
+			zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(*promotion)][move.to];
 	} else {
 		bb |= 1ULL << move.to;
+		hash ^= zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(piece)][move.to];
 	}
 
 	// move rook if castling
-	if (isKCastle) {
+	if (isKCastle || isQCastle) {
+		uint8_t rookFrom, rookTo;
+		if (isKCastle) {
+			rookFrom = player == player_t::white ? 7 : 63;
+			rookTo = player == player_t::white ? 5 : 61;
+		} else {
+			rookFrom = player == player_t::white ? 0 : 56;
+			rookTo = player == player_t::white ? 3 : 59;
+		}
 		bitboard_t& rook = getBitboard(player, piece_t::rook);
-		rook &= ~(1ULL << (player == player_t::white ? 7 : 63));
-		rook |= 1ULL << (player == player_t::white ? 5 : 61);
-	} else if (isQCastle) {
-		bitboard_t& rook = getBitboard(player, piece_t::rook);
-		rook &= ~(1ULL << (player == player_t::white ? 0 : 56));
-		rook |= 1ULL << (player == player_t::white ? 3 : 59);
+		rook &= ~(1ULL << rookFrom);
+		rook |= 1ULL << rookTo;
+		hash ^= zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(piece_t::rook)]
+								 [rookFrom];
+		hash ^=
+			zobrist
+				.pieceKeys[static_cast<int>(player)][static_cast<int>(piece_t::rook)][rookTo];
 	}
 
 	// handle e.p. capture
 	if (isEP) {
-		bitboard_t& pawn = getBitboard(OtherPlayer(player), piece_t::pawn);
-		bitboard_t mask = 1ULL << move.to;
-		if (player == player_t::white) {
-			mask >>= 8;
-		} else {
-			mask <<= 8;
-		}
+		bitboard_t& pawn = getBitboard(otherPlayer, piece_t::pawn);
+		uint8_t ep_square = move.to;
+		ep_square += player == player_t::white ? -8 : 8;
+		bitboard_t mask = 1ULL << ep_square;
 		pawn &= ~mask;
+		hash ^= zobrist.pieceKeys[static_cast<int>(otherPlayer)]
+								 [static_cast<int>(piece_t::pawn)][ep_square];
 	}
 
 	// update clocks
@@ -236,8 +255,11 @@ board_t& board_t::doMove(move_t move) {
 	if (player == player_t::black) {
 		fullmove++;
 	}
+
 	// toggle player to move
 	metadata ^= 1 << 4;
+	hash ^= zobrist.playerKey;
+
 	// remove castling rights if king moves
 	if (piece == piece_t::king) {
 		metadata &= ~(0b11 << (player == player_t::white ? 0 : 2));
@@ -259,10 +281,22 @@ board_t& board_t::doMove(move_t move) {
 		}
 	}
 
+	// update hash for castling rights changes
+	uint8_t castlingRightsDiff = 0b1111 & (oldMetadata ^ metadata);
+	for (int i = 0; i < 4; i++) {
+		if (castlingRightsDiff & (1 << i)) {
+			hash ^= zobrist.castleKeys[i];
+		}
+	}
+
 	// handle e.p. rights
+	if (enPassant >= 0) {
+		hash ^= zobrist.enPassantKeys[enPassant % 8];
+	}
 	if (piece == piece_t::pawn &&
 		std::abs(static_cast<int>(move.from) - static_cast<int>(move.to)) == 16) {
 		enPassant = player == player_t::white ? move.from + 8 : move.from - 8;
+		hash ^= zobrist.enPassantKeys[enPassant % 8];
 	} else {
 		enPassant = -1;
 	}
