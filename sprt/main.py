@@ -9,10 +9,14 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 import os
-import shutil
 import subprocess
+from tempfile import TemporaryDirectory
 
 from git import Repo
+
+
+os.environ["PHOTON_DISABLE_LOGGING"] = "1"
+
 
 def get_args():
     parser = argparse.ArgumentParser(
@@ -47,31 +51,29 @@ def clone_and_build(builds_dir: Path, commit: str):
     repo = Repo(repo_root)
     git_url = repo.remote().url
 
-    commit_hash = repo.git.rev_parse(commit)
-    clone_dir = builds_dir / commit_hash
-    build_dir = clone_dir / "build"
+    commit_hash: str = repo.git.rev_parse(commit)
+    build_dir = builds_dir / commit_hash
     executable_path = build_dir / "photon"
 
-    # If we've already built the engine, shortcut. Otherwise delete and rebuild.
+    # If we've already built the engine, shortcut
     if executable_path.exists():
         return commit_hash, executable_path
-    shutil.rmtree(clone_dir, ignore_errors=True)
-    clone_dir.mkdir()
 
-    repo = Repo.clone_from(git_url, clone_dir)
-    repo.git.checkout(commit)
-    build_dir.mkdir(exist_ok=True)
+    with TemporaryDirectory() as temp_dir:
+        repo = Repo.clone_from(git_url, temp_dir)
+        repo.git.checkout(commit)
+        build_dir.mkdir(exist_ok=True)
 
-    subprocess.run(
-        ["cmake", "-B", str(build_dir), "-DCMAKE_BUILD_TYPE=Release"],
-        cwd=str(clone_dir),
-        check=True,
-    )
-    subprocess.run(
-        ["cmake", "--build", str(build_dir), "--target", "photon", "-j", str(os.cpu_count() // 2)],
-        cwd=str(clone_dir),
-        check=True,
-    )
+        subprocess.run(
+            ["cmake", "-B", str(build_dir), "-DCMAKE_BUILD_TYPE=Release"],
+            cwd=temp_dir,
+            check=True,
+        )
+        subprocess.run(
+            ["cmake", "--build", str(build_dir), "--target", "photon", "-j", str(os.cpu_count() // 2)],
+            cwd=temp_dir,
+            check=True,
+        )
 
     assert executable_path.exists(), f"Engine executable not found at {executable_path}"
     return commit_hash, executable_path
