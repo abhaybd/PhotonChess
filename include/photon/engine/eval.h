@@ -11,6 +11,7 @@ namespace photon::engine {
 struct evaluation_t {
 	result_t result;
 	float score;
+	/** Principal variation in reverse order */
 	std::vector<move_t> moves;
 
 	evaluation_t(const evaluation_t&) = default;

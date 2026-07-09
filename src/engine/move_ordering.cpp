@@ -26,7 +26,7 @@ int MVV_LVA(piece_t attacker, piece_t victim) {
 
 } // namespace
 
-std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<move_t>& moves) {
+std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<move_t>& moves, std::optional<move_t> tt_move) {
 	std::vector<scoredmove_t> scoredMoves;
 	scoredMoves.reserve(moves.size());
 	for (move_t m : moves) {
@@ -36,7 +36,9 @@ std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<mov
 			DCHECK_F(victimOpt.has_value());
 			score += MVV_LVA(m.getPiece(board), *victimOpt);
 		}
-		// TODO: add transposition-table ordering
+		if (tt_move && m == *tt_move) {
+			score += 100;
+		}
 		// TODO: add killer heuristic
 		scoredMoves.push_back({m, score});
 	}

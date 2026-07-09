@@ -78,7 +78,8 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 	}
 
 	std::vector<move_t> moves = board.moves();
-	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves);
+	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
+	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, tt_move);
 
 	evaluation_t best = {result, std::numeric_limits<float>::lowest(), {}};
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
@@ -103,7 +104,7 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 	} else {
 		entry_type = transposition_table_t::entry_type_t::exact;
 	}
-	state.ttable.set(board, depth, best.score, entry_type, best.moves[0]);
+	state.ttable.set(board, depth, best.score, entry_type, best.moves.back());
 
 	return best;
 }
@@ -120,10 +121,12 @@ evalstate_ptr_t CreateEvalState() {
 
 std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth,
 												 evalstate_t& state) {
-	// TODO: add iterative deepening
 	evalmetrics_t metrics;
 	float alpha = std::numeric_limits<float>::lowest();
 	float beta = std::numeric_limits<float>::max();
+	for (int d = 1; d < depth; d++) {
+		negamax(board, d, 0, alpha, beta, metrics, state);
+	}
 	evaluation_t eval = negamax(board, depth, 0, alpha, beta, metrics, state);
 	std::vector<move_t> moves(eval.moves.crbegin(), eval.moves.crend());
 	eval.moves = std::move(moves);

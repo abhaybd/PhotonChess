@@ -67,7 +67,7 @@ void positionCommand(const uci::arguments_t& args) {
 void goCommand(const uci::arguments_t& args) {
 	LOG_SCOPE_F(INFO, "Received command: go");
 
-	int depth = 4;
+	int depth = 6;
 	if (args.find("depth") != args.end()) {
 		depth = std::stoi(args.at("depth"));
 	}
