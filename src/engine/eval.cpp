@@ -73,7 +73,8 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 		} else if (result == result_t::draw) {
 			return {result, 0.0f, {}};
 		} else {
-			ABORT_F("Player to move cannot already have checkmate! result == WinResult(player)");
+			ABORT_F(
+				"Player to move cannot already have checkmate! result == WinResult(player)");
 		}
 	}
 
