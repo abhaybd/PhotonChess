@@ -4,6 +4,7 @@
 #include "photon/core.h"
 #include "photon/util.h"
 
+#include <limits>
 #include <loguru.hpp>
 
 using namespace photon::util;

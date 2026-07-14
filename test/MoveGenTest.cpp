@@ -2,6 +2,7 @@
 #include "photon/core.h"
 #include "photon/util.h"
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 
 using namespace photon;
