@@ -11,6 +11,7 @@
 #include <uci/events.h>
 
 using namespace photon;
+using namespace std::chrono_literals;
 
 const std::string VERSION = "0.1.0";
 std::unique_ptr<board_t> board;
@@ -31,16 +32,16 @@ void newGameCommand(const uci::arguments_t&) {
 }
 
 void positionCommand(const uci::arguments_t& args) {
+	// TODO: avoid resetting if board is already in the same position, and just apply moves
 	LOG_SCOPE_F(INFO, "Received command: position");
 	board.reset();
 	eval_state = engine::CreateEvalState();
 
-	auto fenIt = args.find("fen");
-	if (fenIt != args.end()) {
+	if (auto fenIt = args.find("fen"); fenIt != args.end()) {
 		LOG_F(INFO, "Initial FEN: %s", fenIt->second.c_str());
 		board = std::make_unique<board_t>(util::MakeBoard(fenIt->second));
-	} else {
-		LOG_F(INFO, "No initial FEN provided, using default board");
+	} else if (args.find("startpos") != args.end()) {
+		LOG_F(INFO, "Starting from default position");
 		board = std::make_unique<board_t>(util::DefaultBoard());
 	}
 
@@ -67,16 +68,39 @@ void positionCommand(const uci::arguments_t& args) {
 void goCommand(const uci::arguments_t& args) {
 	LOG_SCOPE_F(INFO, "Received command: go");
 
-	int depth = 6;
+	engine::searchparams_t params;
 	if (args.find("depth") != args.end()) {
-		depth = std::stoi(args.at("depth"));
+		params.maxDepth = std::stoi(args.at("depth"));
 	}
-	// TODO: think for time budget
+	if (args.find("movetime") != args.end()) {
+		std::chrono::milliseconds moveTime(std::stoi(args.at("movetime")));
+		params.maxTime = std::make_pair(moveTime, moveTime);
+	} else {
+		std::string baseTimeKey, incrementKey;
+		if (board->playerToMove() == player_t::white) {
+			baseTimeKey = "wtime";
+			incrementKey = "winc";
+		} else {
+			baseTimeKey = "btime";
+			incrementKey = "binc";
+		}
+		CHECK_F(args.find(baseTimeKey) != args.end(), "Missing %s argument", baseTimeKey.c_str());
+		std::chrono::milliseconds baseTime(std::stoi(args.at(baseTimeKey)));
+		std::chrono::milliseconds increment(0);
+		if (args.find(incrementKey) != args.end()) {
+			increment = std::chrono::milliseconds(std::stoi(args.at(incrementKey)));
+		}
+
+		// time management: 5% of remaining time + 50% of increment, min of 50ms
+		auto softTime = std::max(baseTime / 20, 50ms);
+		auto hardTime = std::max(baseTime / 20 + increment / 2, 50ms);
+		params.maxTime = std::make_pair(softTime, hardTime);
+	}
 
 	CHECK_F(args.find("infinite") == args.end(), "Infinite search not supported");
 
 	auto start = std::chrono::high_resolution_clock::now();
-	auto [result, metrics] = engine::EvalBoard(*board, depth, *eval_state);
+	auto [result, metrics] = engine::EvalBoard(*board, params, *eval_state);
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
@@ -84,7 +108,7 @@ void goCommand(const uci::arguments_t& args) {
 
 	std::stringstream ss;
 	ss << "info multipv 1";
-	ss << " depth " << depth;
+	ss << " depth " << metrics.depth;
 	ss << " nodes " << metrics.nodes << " nps "
 	   << static_cast<int>(metrics.nodes / elapsed.count());
 	ss << " time " << elapsedMillis.count() << " score ";

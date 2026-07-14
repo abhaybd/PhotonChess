@@ -2,7 +2,9 @@
 
 #include "photon/core.h"
 
+#include <chrono>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -13,17 +15,17 @@ struct evaluation_t {
 	float score;
 	/** Principal variation in reverse order */
 	std::vector<move_t> moves;
+};
 
-	evaluation_t(const evaluation_t&) = default;
-	evaluation_t(evaluation_t&&) = default;
-	evaluation_t& operator=(evaluation_t&&) = default;
+struct searchparams_t {
+	std::optional<int> maxDepth;
+	/** (soft, hard) time limits for search */
+	std::optional<std::pair<std::chrono::milliseconds, std::chrono::milliseconds>> maxTime;
 };
 
 struct evalmetrics_t {
-	int nodes;
-
-	evalmetrics_t() : nodes(0) {}
-	evalmetrics_t(const evalmetrics_t&) = default;
+	int nodes = 0;
+	int depth = 0;
 };
 
 struct evalstate_t;
@@ -36,9 +38,9 @@ evalstate_ptr_t CreateEvalState();
 
 float PositionHeuristic(const board_t& board);
 
-std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth);
+std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, const searchparams_t& params);
 
-std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth,
+std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, const searchparams_t& params,
 												 evalstate_t& state);
 
 } // namespace photon::engine

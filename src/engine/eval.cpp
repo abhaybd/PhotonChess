@@ -14,12 +14,14 @@ namespace photon::engine {
 
 struct evalstate_t {
 	transposition_table_t ttable;
+	std::chrono::high_resolution_clock::time_point startTime;
 };
 
 namespace {
 
 constexpr float CHECKMATE_SCORE = 10000.0f;
 constexpr size_t TTABLE_SIZE = 1ULL << 20;
+constexpr int HARD_TIME_CHECK_INTERVAL = 10000;
 
 bool operator<(const evaluation_t& a, const evaluation_t& b) {
 	return a.score < b.score;
@@ -31,10 +33,19 @@ evaluation_t operator-(evaluation_t&& a) {
 	return ret;
 }
 
-evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, float beta,
-					 evalmetrics_t& metrics, evalstate_t& state) {
+std::optional<evaluation_t> negamax(const board_t& board, const searchparams_t& params, int depth, int plies,
+					 float alpha, float beta, evalmetrics_t& metrics, evalstate_t& state) {
 	// update metrics
 	metrics.nodes++;
+
+	// enforce time limit
+	if (params.maxTime && metrics.nodes % HARD_TIME_CHECK_INTERVAL == 0) {
+		auto elapsed = std::chrono::high_resolution_clock::now() - state.startTime;
+		if (elapsed >= params.maxTime->second) {
+			LOG_F(INFO, "Hard time limit reached, stopping search");
+			return std::nullopt;
+		}
+	}
 
 	player_t player = board.playerToMove();
 	result_t result = board.result();
@@ -55,7 +66,7 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 				break;
 		}
 		if (alpha >= beta) {
-			return {result, tt_entry->score, {tt_entry->best_move}};
+			return evaluation_t{result, tt_entry->score, {tt_entry->best_move}};
 		}
 	}
 
@@ -66,12 +77,12 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 			if (player == player_t::black) {
 				score = -score;
 			}
-			return {result, score, {}};
+			return evaluation_t{result, score, {}};
 		} else if (result == WinResult(OtherPlayer(player))) {
 			// penalize mated positions by the number of plies to the checkmate
-			return {result, -CHECKMATE_SCORE + plies, {}};
+			return evaluation_t{result, -CHECKMATE_SCORE + plies, {}};
 		} else if (result == result_t::draw) {
-			return {result, 0.0f, {}};
+			return evaluation_t{result, 0.0f, {}};
 		} else {
 			ABORT_F(
 				"Player to move cannot already have checkmate! result == WinResult(player)");
@@ -86,7 +97,11 @@ evaluation_t negamax(const board_t& board, int depth, int plies, float alpha, fl
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
 		board_t child = board.doMoveCopy(m);
-		auto candidate = -negamax(child, depth - 1, plies + 1, -beta, -alpha, metrics, state);
+		auto candidateOpt = negamax(child, params, depth - 1, plies + 1, -beta, -alpha, metrics, state);
+		if (!candidateOpt) {
+			return std::nullopt;
+		}
+		auto candidate = -(*std::move(candidateOpt));
 		if (best < candidate) {
 			best = std::move(candidate);
 			best.moves.push_back(m);
@@ -117,26 +132,49 @@ void evalstate_deleter_t::operator()(evalstate_t* state) const {
 }
 
 evalstate_ptr_t CreateEvalState() {
-	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE)});
+	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE), std::chrono::high_resolution_clock::now()});
 }
 
-std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth,
-												 evalstate_t& state) {
+std::pair<evaluation_t, evalmetrics_t>
+EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state) {
 	evalmetrics_t metrics;
 	float alpha = std::numeric_limits<float>::lowest();
 	float beta = std::numeric_limits<float>::max();
-	for (int d = 1; d < depth; d++) {
-		negamax(board, d, 0, alpha, beta, metrics, state);
+	state.startTime = std::chrono::high_resolution_clock::now();
+
+	CHECK_F(params.maxDepth.has_value() || params.maxTime.has_value(),
+			"Either maxDepth or maxTime must be specified");
+	CHECK_F(!params.maxTime || params.maxTime->first <= params.maxTime->second,
+			"Soft time limit must be less than or equal to hard time limit");
+
+	evaluation_t eval;
+	for (int d = 1; d <= params.maxDepth.value_or(std::numeric_limits<int>::max()); d++) {
+		auto evalOpt = negamax(board, params, d, 0, alpha, beta, metrics, state);
+		if (!evalOpt) {
+			if (d == 1) {
+				ABORT_F("Hard time limit reached before any search could be completed");
+			}
+			break;
+		}
+		eval = evalOpt.value();
+		metrics.depth = d;
+		if (params.maxTime) {
+			auto elapsed = std::chrono::high_resolution_clock::now() - state.startTime;
+			if (elapsed >= params.maxTime->first) {
+				break;
+			}
+		}
 	}
-	evaluation_t eval = negamax(board, depth, 0, alpha, beta, metrics, state);
+
 	std::vector<move_t> moves(eval.moves.crbegin(), eval.moves.crend());
 	eval.moves = std::move(moves);
 	return std::make_pair(eval, metrics);
 }
 
-std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, int depth) {
+std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board,
+												 const searchparams_t& params) {
 	auto state = CreateEvalState();
-	return EvalBoard(board, depth, *state);
+	return EvalBoard(board, params, *state);
 }
 
 } // namespace photon::engine
