@@ -71,6 +71,7 @@ std::optional<evaluation_t> negamax(const board_t& board, const searchparams_t& 
 	}
 
 	// TODO: add quiescence search
+	// TODO: add 3-fold repetition detection
 	if (depth == 0 || result != result_t::none) {
 		if (result == result_t::none) {
 			float score = PositionHeuristic(board);

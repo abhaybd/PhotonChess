@@ -38,7 +38,6 @@ void newGameCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: ucinewgame");
 	board.reset();
 	eval_state = engine::CreateEvalState();
-	// TODO: reset any other board state once added
 }
 
 void positionCommand(const uci::arguments_t& args) {
@@ -108,6 +107,7 @@ void goCommand(const uci::arguments_t& args) {
 		params.maxTime = std::make_pair(softTime, hardTime);
 	}
 
+	// TODO: add support for infinite search
 	CHECK_F(args.find("infinite") == args.end(), "Infinite search not supported");
 
 	auto start = std::chrono::high_resolution_clock::now();
