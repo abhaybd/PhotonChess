@@ -147,16 +147,14 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	CHECK_F(!params.maxTime || params.maxTime->first <= params.maxTime->second,
 			"Soft time limit must be less than or equal to hard time limit");
 
-	evaluation_t eval;
+	std::optional<evaluation_t> eval;
 	for (int d = 1; d <= params.maxDepth.value_or(std::numeric_limits<int>::max()); d++) {
 		auto evalOpt = negamax(board, params, d, 0, alpha, beta, metrics, state);
 		if (!evalOpt) {
-			if (d == 1) {
-				ABORT_F("Hard time limit reached before any search could be completed");
-			}
+			// we're terminating early (e.g. time limit) so break out
 			break;
 		}
-		eval = evalOpt.value();
+		eval = evalOpt;
 		metrics.depth = d;
 		if (params.maxTime) {
 			auto elapsed = std::chrono::high_resolution_clock::now() - state.startTime;
@@ -165,10 +163,11 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 			}
 		}
 	}
+	CHECK_F(eval.has_value(), "Search terminated without returning a result");
 
-	std::vector<move_t> moves(eval.moves.crbegin(), eval.moves.crend());
-	eval.moves = std::move(moves);
-	return std::make_pair(eval, metrics);
+	std::vector<move_t> moves(eval->moves.crbegin(), eval->moves.crend());
+	eval->moves = std::move(moves);
+	return std::make_pair(*eval, metrics);
 }
 
 std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board,
