@@ -20,6 +20,7 @@
 using namespace photon;
 using namespace photon::engine;
 using namespace photon::util;
+using namespace std::chrono_literals;
 
 namespace {
 extern const std::vector<std::string> positions;
@@ -85,17 +86,19 @@ epd_t ParseEPD(std::string_view epd_str) {
 	return epd;
 }
 
-testresult_t run_test(const std::vector<epd_t>& epds, int depth) {
+testresult_t run_test(const std::vector<epd_t>& epds, std::chrono::milliseconds timePerPos) {
 	std::vector<board_t> boards;
 	boards.reserve(epds.size());
 	for (const epd_t& epd : epds) {
 		boards.push_back(MakeBoard(epd.fen));
 	}
+    searchparams_t params;
+    params.maxTime = std::make_pair(timePerPos, timePerPos);
 
 	size_t correct = 0;
 	auto start = std::chrono::steady_clock::now();
 	for (size_t i = 0; i < epds.size(); i++) {
-		auto [result, _] = EvalBoard(boards[i], depth);
+		auto [result, _] = EvalBoard(boards[i], params);
 		move_t move = result.moves[0];
 		if (epds[i].best_move && *epds[i].best_move == move) {
 			correct++;
@@ -113,11 +116,10 @@ int main() {
 	std::vector<epd_t> epds;
 	std::transform(positions.begin(), positions.end(), std::back_inserter(epds), ParseEPD);
 
-	for (int depth : {2}) {
-		testresult_t result = run_test(epds, depth);
-		std::cout << "Depth " << depth << ": " << result.correct << " / " << result.total
-				  << " in " << result.elapsed << "s" << std::endl;
-	}
+    std::chrono::milliseconds timePerPos = 15000ms;
+    testresult_t result = run_test(epds, timePerPos);
+    std::cout << "Result: TimePerPos=" << timePerPos.count() << "ms, " << result.correct << " / " << result.total
+              << " in " << result.elapsed << "s" << std::endl;
 }
 
 namespace {
