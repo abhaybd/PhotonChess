@@ -34,8 +34,8 @@ add_loguru()
 function(add_uci)
     FetchContent_Declare(
         UCI
-        GIT_REPOSITORY https://github.com/andersfylling/uci.git
-        GIT_TAG master
+        GIT_REPOSITORY https://github.com/abhaybd/uci.git
+        GIT_TAG fba52e68b1b6c93b9420ee69f5dabf78540820a0
     )
     set(CMAKE_CXX_FLAGS) # disable warnings for uci
     FetchContent_MakeAvailable(UCI)
