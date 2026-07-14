@@ -17,6 +17,16 @@ const std::string VERSION = "0.1.0";
 std::unique_ptr<board_t> board;
 engine::evalstate_ptr_t eval_state;
 
+std::string argsToStr(const uci::arguments_t& args) {
+	std::stringstream ss;
+	ss << "{";
+	for (const auto& entry : args) {
+		ss << "\"" << entry.first << "\": \"" << entry.second << "\", ";
+	}
+	auto s = ss.str();
+	return s.substr(0, s.size() - 2) + "}";
+}
+
 void uciCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: uci");
 	std::cout << "id name Photon " << VERSION << std::endl;
@@ -67,6 +77,7 @@ void positionCommand(const uci::arguments_t& args) {
 
 void goCommand(const uci::arguments_t& args) {
 	LOG_SCOPE_F(INFO, "Received command: go");
+	LOG_F(INFO, "Args: %s", argsToStr(args).c_str());
 
 	engine::searchparams_t params;
 	if (args.find("depth") != args.end()) {
