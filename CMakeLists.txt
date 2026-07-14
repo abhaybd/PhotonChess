@@ -11,6 +11,7 @@ endif()
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -flto -DNDEBUG")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)
 Include(FetchContent)
@@ -81,10 +82,6 @@ target_link_libraries(photon_engine PRIVATE loguru::loguru)
 add_executable(photon src/photon_main.cpp)
 target_link_libraries(photon photon_engine loguru::loguru)
 target_link_libraries(photon uci)
-
-add_executable(eret src/engine/ERET.cpp)
-target_link_libraries(eret photon_engine loguru::loguru)
-target_link_libraries(eret uci)
 
 add_executable(tests
     test/CoreTest.cpp

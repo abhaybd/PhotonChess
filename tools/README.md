@@ -4,6 +4,7 @@ A collection of python tools to aid development of PhotonChess. Communicates wit
 
 Supports:
  - [Sequential Probability Ratio Tests](https://www.chessprogramming.org/Sequential_Probability_Ratio_Test)
+ - [Eigenmann Rapid Engine Test (ERET)](https://www.chessprogramming.org/Eigenmann_Rapid_Engine_Test)
 
 ## Installation
 
