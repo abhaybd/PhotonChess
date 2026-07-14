@@ -139,7 +139,11 @@ int main(int argc, char** argv) {
 	loguru::g_preamble_date = false;
 	loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
 	if (std::getenv("PHOTON_DISABLE_LOGGING") == nullptr) {
-		loguru::add_file("photonlog.txt", loguru::Truncate, loguru::Verbosity_MAX);
+		const char* logFile = "photonlog.txt";
+		if (std::getenv("PHOTON_LOG_FILE") != nullptr) {
+			logFile = std::getenv("PHOTON_LOG_FILE");
+		}
+		loguru::add_file(logFile, loguru::Truncate, loguru::Verbosity_MAX);
 	}
 	loguru::init(argc, argv);
 	LOG_F(INFO, "Photon started");
