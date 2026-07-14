@@ -94,17 +94,18 @@ void goCommand(const uci::arguments_t& args) {
 			baseTimeKey = "btime";
 			incrementKey = "binc";
 		}
-		CHECK_F(args.find(baseTimeKey) != args.end(), "Missing %s argument", baseTimeKey.c_str());
-		std::chrono::milliseconds baseTime(std::stoi(args.at(baseTimeKey)));
-		std::chrono::milliseconds increment(0);
-		if (args.find(incrementKey) != args.end()) {
-			increment = std::chrono::milliseconds(std::stoi(args.at(incrementKey)));
+		if (args.find(baseTimeKey) != args.end()) {
+			std::chrono::milliseconds baseTime(std::stoi(args.at(baseTimeKey)));
+			std::chrono::milliseconds increment(0);
+			if (args.find(incrementKey) != args.end()) {
+				increment = std::chrono::milliseconds(std::stoi(args.at(incrementKey)));
+			}
+	
+			// time management: 5% of remaining time + 50% of increment, min of 50ms
+			auto softTime = std::max(baseTime / 20, 50ms);
+			auto hardTime = std::max(baseTime / 20 + increment / 2, 50ms);
+			params.maxTime = std::make_pair(softTime, hardTime);
 		}
-
-		// time management: 5% of remaining time + 50% of increment, min of 50ms
-		auto softTime = std::max(baseTime / 20, 50ms);
-		auto hardTime = std::max(baseTime / 20 + increment / 2, 50ms);
-		params.maxTime = std::make_pair(softTime, hardTime);
 	}
 
 	// TODO: add support for infinite search
