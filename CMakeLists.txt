@@ -10,7 +10,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -flto -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -flto=auto -DNDEBUG")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)

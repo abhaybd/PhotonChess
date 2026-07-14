@@ -1,9 +1,8 @@
 #pragma once
 
 #include "photon/core.h"
-#include "photon/util.h"
 
-#include <array>
+#include <cstdint>
 #include <loguru.hpp>
 #include <optional>
 #include <vector>
@@ -19,7 +18,7 @@ public:
 	};
 
 	struct entry_t {
-		size_t hash;
+		uint64_t hash;
 		int depth;
 		float score;
 		entry_type_t type;

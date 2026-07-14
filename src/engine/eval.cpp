@@ -55,6 +55,7 @@ std::optional<evaluation_t> negamax(const board_t& board, const searchparams_t& 
 	if (tt_entry && tt_entry->depth >= depth) {
 		switch (tt_entry->type) {
 			case transposition_table_t::entry_type_t::exact:
+				// TODO: load result from ttable
 				return evaluation_t{result, tt_entry->score, {tt_entry->best_move}};
 
 			case transposition_table_t::entry_type_t::lower_bound:
