@@ -290,14 +290,20 @@ board_t& board_t::doMove(move_t move) {
 
 	// handle e.p. rights
 	if (enPassant >= 0) {
+		// remove old e.p.
 		hash ^= zobrist.enPassantKeys[enPassant % 8];
 	}
+	enPassant = -1;
 	if (piece == piece_t::pawn &&
 		std::abs(static_cast<int>(move.from) - static_cast<int>(move.to)) == 16) {
-		enPassant = player == player_t::white ? move.from + 8 : move.from - 8;
-		hash ^= zobrist.enPassantKeys[enPassant % 8];
-	} else {
-		enPassant = -1;
+		bitboard_t row = 0xFFULL << (8 * (move.to / 8));
+		bitboard_t mask = 1ULL << move.to;
+		mask = ((mask << 1) | (mask >> 1)) & row;
+		// only set e.p. (and add to hash) if e.p. can be played
+		if (mask & getBitboard(otherPlayer, piece_t::pawn)) {
+			enPassant = player == player_t::white ? move.from + 8 : move.from - 8;
+			hash ^= zobrist.enPassantKeys[enPassant % 8];
+		}
 	}
 
 	return *this;

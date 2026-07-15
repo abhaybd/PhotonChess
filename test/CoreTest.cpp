@@ -141,13 +141,13 @@ TEST_CASE("Test doMove", "[core]") {
 	// A bunch of moves that test e.p., capturing, pawn moves, castling, etc.
 	// This should cover most/all relevant cases
 	std::vector<std::pair<std::string, std::string>> game = {
-		{"e2-e4", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"},
-		{"e7-e5", "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"},
+		{"e2-e4", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"},
+		{"e7-e5", "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"},
 		{"Ng1-f3", "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"},
 		{"Nb8-c6", "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"},
 		{"Nf3xe5", "r1bqkbnr/pppp1ppp/2n5/4N3/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 0 3"},
 		{"Nc6xe5", "r1bqkbnr/pppp1ppp/8/4n3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 4"},
-		{"d2-d4", "r1bqkbnr/pppp1ppp/8/4n3/3PP3/8/PPP2PPP/RNBQKB1R b KQkq d3 0 4"},
+		{"d2-d4", "r1bqkbnr/pppp1ppp/8/4n3/3PP3/8/PPP2PPP/RNBQKB1R b KQkq - 0 4"},
 		{"Bf8-e7", "r1bqk1nr/ppppbppp/8/4n3/3PP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5"},
 		{"d4-d5", "r1bqk1nr/ppppbppp/8/3Pn3/4P3/8/PPP2PPP/RNBQKB1R b KQkq - 0 5"},
 		{"c7-c5", "r1bqk1nr/pp1pbppp/8/2pPn3/4P3/8/PPP2PPP/RNBQKB1R w KQkq c6 0 6"},

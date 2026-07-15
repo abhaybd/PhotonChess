@@ -184,6 +184,7 @@ struct board_t {
 
 	/**
 	 * @brief Gets the FEN representation of the chessboard state.
+	 * @note The FEN is slightly nonstandard in that e.p. is included only if playable.
 	 * @return The FEN representation of the chessboard state
 	 */
 	std::string fen() const;

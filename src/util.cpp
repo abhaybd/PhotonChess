@@ -67,6 +67,18 @@ board_t MakeBoard(const std::vector<std::string_view>& parts) {
 	}
 
 	board.enPassant = parts[3] == "-" ? -1 : ParseSquare(parts[3]);
+	// e.p. should only be set if it can be played, so validate this
+	if (board.enPassant >= 0) {
+		player_t player = board.playerToMove();
+		int square = board.enPassant + (player == player_t::white ? -8 : 8);
+		bitboard_t row = 0xFFULL << (8 * (square / 8));
+		bitboard_t mask = 1ULL << square;
+		mask = ((mask << 1) | (mask >> 1)) & row;
+		if (!(mask & board.getBitboard(player, piece_t::pawn))) {
+			board.enPassant = -1;
+		}
+	}
+
 	auto halfmoveRet =
 		std::from_chars(parts[4].cbegin(), parts[4].cend(), board.halfmoveClock);
 	CHECK_F(halfmoveRet.ec == std::errc{}, "Unable to parse halfmove clock string: %s",
