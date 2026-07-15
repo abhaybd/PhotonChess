@@ -3,7 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
-#include <string_view>
+#include <string>
 #include <vector>
 
 namespace photon {

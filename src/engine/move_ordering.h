@@ -2,8 +2,6 @@
 
 #include "photon/core.h"
 
-#include <array>
-
 namespace photon::engine {
 
 /**

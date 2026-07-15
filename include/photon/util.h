@@ -3,7 +3,6 @@
 #include "photon/core.h"
 
 #include <istream>
-#include <vector>
 
 /**
  * @namespace photon::util

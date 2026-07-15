@@ -5,7 +5,6 @@
 #include <array>
 #include <loguru.hpp>
 #include <strings.h>
-#include <utility>
 
 namespace photon::engine {
 namespace {
