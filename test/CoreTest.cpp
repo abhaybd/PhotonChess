@@ -4,6 +4,7 @@
 #include "photon/util.h"
 
 #include <algorithm>
+
 #include <catch2/catch_test_macros.hpp>
 
 using namespace photon;
@@ -249,5 +250,50 @@ TEST_CASE("Test move generation", "[core]") {
 			move_t move = MoveFromLongNotation(board.playerToMove(), moveStr);
 			REQUIRE(std::find(moves.begin(), moves.end(), move) != moves.end());
 		}
+	}
+}
+
+TEST_CASE("Test history reset", "[core]") {
+	board_t board = DefaultBoard();
+	std::vector<std::string> moves = {"b1c3", "b8c6", "c3b1", "c6b8"};
+	for (size_t i = 0; i < moves.size(); i++) {
+		board.doMove(MoveFromUCI(board, moves[i]));
+		REQUIRE(board.historyHashes.size() == i + 1);
+	}
+	// make an irreversible move, check that the history is reset
+	board.doMove(MoveFromUCI(board, "e2e4"));
+	REQUIRE(board.historyHashes.size() == 0);
+}
+
+TEST_CASE("Test threefold repetition", "[core]") {
+	board_t board = DefaultBoard();
+	std::vector<std::string> moves = {"b1c3", "b8c6", "c3b1", "c6b8",
+									  "b1c3", "b8c6", "c3b1", "c6b8"};
+	for (size_t i = 0; i < moves.size() - 1; i++) {
+		move_t move = MoveFromUCI(board, moves[i]);
+		board.doMove(move);
+		REQUIRE(board.result() == result_t::none);
+	}
+	board.doMove(MoveFromUCI(board, moves.back()));
+	REQUIRE(board.result() == result_t::draw);
+}
+
+TEST_CASE("Test checkmate", "[core]") {
+	std::string fen = "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 1";
+	board_t board = MakeBoard(fen);
+	REQUIRE(board.result() == result_t::white_wins);
+}
+
+TEST_CASE("Test stalemate", "[core]") {
+	SECTION("Black to move") {
+		std::string fen = "7k/5Q2/8/8/8/8/8/4K3 b - - 0 1";
+		board_t board = MakeBoard(fen);
+		REQUIRE(board.result() == result_t::draw);
+	}
+
+	SECTION("White to move") {
+		std::string fen = "7k/5Q2/8/8/8/8/8/4K3 w - - 0 1";
+		board_t board = MakeBoard(fen);
+		REQUIRE(board.result() == result_t::none);
 	}
 }

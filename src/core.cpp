@@ -141,11 +141,25 @@ bool board_t::inCheck(player_t player) const {
 
 result_t board_t::result() const {
 	player_t player = playerToMove();
-	if (moves().empty()) {
-		return inCheck(player) ? WinResult(OtherPlayer(player)) : result_t::draw;
-	}
+	// 50 move rule
 	if (halfmoveClock >= 100) {
 		return result_t::draw;
+	}
+	// threefold repetition
+	if (historyHashes.size() >= 8) {
+		int count = 0;
+		for (int i = historyHashes.size() - 4; i >= 0; i -= 2) {
+			if (historyHashes[i] == hash) {
+				count++;
+				if (count >= 2) {
+					return result_t::draw;
+				}
+			}
+		}
+	}
+	// stalemate or checkmate
+	if (moves().empty()) {
+		return inCheck(player) ? WinResult(OtherPlayer(player)) : result_t::draw;
 	}
 	return result_t::none;
 }
@@ -168,6 +182,13 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 
 board_t& board_t::doMove(move_t move) {
 	DCHECK_F(move.getPlayer(*this) == playerToMove());
+
+	if (move.isReversible(*this)) {
+		historyHashes.push_back(hash);
+	} else {
+		historyHashes.clear();
+	}
+
 	player_t player = playerToMove();
 	player_t otherPlayer = OtherPlayer(player);
 

@@ -85,6 +85,9 @@ struct board_t {
 	int fullmove;
 	/** Board hash */
 	uint64_t hash;
+	/** Previous board hashes (not including current) that reset upon irreversible moves, for
+	 * repetition detection */
+	std::vector<uint64_t> historyHashes;
 
 	/**
 	 * @brief Construct a new empty board.
