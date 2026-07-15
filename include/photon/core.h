@@ -61,6 +61,7 @@ constexpr std::array<piece_t, 6> ALL_PIECES = {piece_t::pawn, piece_t::knight, p
 											   piece_t::rook, piece_t::queen,  piece_t::king};
 
 struct move_t;
+class temp_move_handle_t;
 
 /**
  * Struct representing the chessboard state.
@@ -85,9 +86,10 @@ struct board_t {
 	int fullmove;
 	/** Board hash */
 	uint64_t hash;
-	/** Previous board hashes (not including current) that reset upon irreversible moves, for
-	 * repetition detection */
+	/** Previous board hashes (not including current) for repetition detection */
 	std::vector<uint64_t> historyHashes;
+	/** Index of the last irreversible move in historyHashes, -1 if none */
+	int16_t lastIrreversibleMove;
 
 	/**
 	 * @brief Construct a new empty board.
@@ -184,6 +186,14 @@ struct board_t {
 	 * @return The updated chessboard state after the move
 	 */
 	board_t doMoveCopy(move_t move) const;
+
+	/**
+	 * @brief Temporarily perform a move on the chessboard state, which is unmade when the
+	 * returned handle is destroyed.
+	 * @param move The move to perform
+	 * @return A handle, which unmakes the move when destroyed
+	 */
+	temp_move_handle_t doMoveTemp(move_t move);
 
 	/**
 	 * @brief Gets the FEN representation of the chessboard state.
@@ -297,6 +307,49 @@ struct move_t {
 
 	bool operator==(const move_t& other) const;
 	bool operator!=(const move_t& other) const;
+};
+
+/**
+ * @brief Handle for a temporary move on a chessboard, returned by board_t::doMoveTemp.
+ *
+ * @note The handles MUST be released in reverse order of their creation.
+ * @note The handles MUST be released before the board is destructed.
+ */
+class temp_move_handle_t {
+public:
+	temp_move_handle_t(board_t* board, move_t move);
+	temp_move_handle_t(const temp_move_handle_t& other) = delete;
+	temp_move_handle_t(temp_move_handle_t&& other) noexcept;
+	~temp_move_handle_t();
+
+	temp_move_handle_t& operator=(const temp_move_handle_t& other) = delete;
+	temp_move_handle_t& operator=(temp_move_handle_t&& other) = delete;
+
+	/**
+	 * @brief Releases the handle without undoing the move.
+	 *
+	 * This serves as an escape hatch to make the move permanent.
+	 */
+	void release();
+
+private:
+	struct board_snapshot_t {
+		std::array<bitboard_t, 6> white, black;
+		uint64_t hash;
+		uint8_t halfmoveClock;
+		int fullmove;
+		int16_t lastIrreversibleMove;
+		uint8_t metadata;
+		int8_t enPassant;
+	};
+	static_assert(sizeof(board_snapshot_t) == sizeof(board_t) - sizeof(board_t::historyHashes),
+				  "board_snapshot_t size mismatch, did you change board_t?");
+
+	board_t* board;
+	board_snapshot_t snapshot;
+	move_t move;
+
+	void unmakeMove();
 };
 
 } // namespace photon

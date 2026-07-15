@@ -12,10 +12,10 @@ using namespace photon::util;
 
 namespace photon {
 
-board_t::board_t() : metadata(0), enPassant(-1), halfmoveClock(0), fullmove(1) {
+board_t::board_t()
+	: metadata(0), enPassant(-1), halfmoveClock(0), fullmove(1), hash(0), lastIrreversibleMove(-1) {
 	white.fill(0);
 	black.fill(0);
-	hash = ZobristHash(*this);
 }
 
 const std::array<bitboard_t, 6>& board_t::getBitboards(player_t player) const {
@@ -146,9 +146,10 @@ result_t board_t::result() const {
 		return result_t::draw;
 	}
 	// threefold repetition
-	if (historyHashes.size() >= 8) {
+	size_t movesSinceIrreversible = historyHashes.size() - lastIrreversibleMove - 1;
+	if (movesSinceIrreversible >= 8) {
 		int count = 0;
-		for (int i = historyHashes.size() - 4; i >= 0; i -= 2) {
+		for (int i = historyHashes.size() - 4; i >= lastIrreversibleMove + 1; i -= 2) {
 			if (historyHashes[i] == hash) {
 				count++;
 				if (count >= 2) {
@@ -183,10 +184,10 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 board_t& board_t::doMove(move_t move) {
 	DCHECK_F(move.getPlayer(*this) == playerToMove());
 
-	if (move.isReversible(*this)) {
-		historyHashes.push_back(hash);
-	} else {
-		historyHashes.clear();
+	historyHashes.push_back(hash);
+	if (!move.isReversible(*this)) {
+		lastIrreversibleMove =
+			static_cast<decltype(lastIrreversibleMove)>(historyHashes.size() - 1);
 	}
 
 	player_t player = playerToMove();
@@ -334,6 +335,10 @@ board_t board_t::doMoveCopy(move_t move) const {
 	board_t copy = *this;
 	copy.doMove(move);
 	return copy;
+}
+
+temp_move_handle_t board_t::doMoveTemp(move_t move) {
+	return temp_move_handle_t(this, move);
 }
 
 std::vector<move_t> board_t::moves() const {
@@ -501,6 +506,51 @@ bool move_t::operator==(const move_t& other) const {
 
 bool move_t::operator!=(const move_t& other) const {
 	return !(*this == other);
+}
+
+temp_move_handle_t::temp_move_handle_t(board_t* board, move_t move)
+	: board(board), move(move) {
+	snapshot.white = board->white;
+	snapshot.black = board->black;
+	snapshot.metadata = board->metadata;
+	snapshot.enPassant = board->enPassant;
+	snapshot.halfmoveClock = board->halfmoveClock;
+	snapshot.fullmove = board->fullmove;
+	snapshot.hash = board->hash;
+	snapshot.lastIrreversibleMove = board->lastIrreversibleMove;
+	board->doMove(move);
+}
+
+temp_move_handle_t::temp_move_handle_t(temp_move_handle_t&& other) noexcept
+	: board(other.board), snapshot(std::move(other.snapshot)), move(other.move) {
+	other.board = nullptr;
+}
+
+temp_move_handle_t::~temp_move_handle_t() {
+	unmakeMove();
+}
+
+void temp_move_handle_t::release() {
+	board = nullptr;
+}
+
+void temp_move_handle_t::unmakeMove() {
+	if (board) {
+		// catches out-of-order unmake
+		DCHECK_F(!board->historyHashes.empty());
+		DCHECK_F(board->historyHashes.back() == snapshot.hash);
+
+		board->white = snapshot.white;
+		board->black = snapshot.black;
+		board->metadata = snapshot.metadata;
+		board->enPassant = snapshot.enPassant;
+		board->halfmoveClock = snapshot.halfmoveClock;
+		board->fullmove = snapshot.fullmove;
+		board->hash = snapshot.hash;
+		board->lastIrreversibleMove = snapshot.lastIrreversibleMove;
+		board->historyHashes.pop_back();
+		board = nullptr;
+	}
 }
 
 } // namespace photon

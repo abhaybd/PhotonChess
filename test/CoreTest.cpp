@@ -183,6 +183,57 @@ TEST_CASE("Test doMove promotion", "[core]") {
 	REQUIRE(board.fen() == "r3k2N/8/8/8/8/8/8/q3K2R w - - 0 2");
 }
 
+TEST_CASE("Test doMoveTemp", "[core]") {
+	std::vector<std::pair<std::string, std::string>> game = {
+		{"e2-e4", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"},
+		{"e7-e5", "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"},
+		{"Ng1-f3", "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"},
+		{"Nb8-c6", "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"},
+		{"Nf3xe5", "r1bqkbnr/pppp1ppp/2n5/4N3/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 0 3"},
+		{"Nc6xe5", "r1bqkbnr/pppp1ppp/8/4n3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 4"},
+		{"d2-d4", "r1bqkbnr/pppp1ppp/8/4n3/3PP3/8/PPP2PPP/RNBQKB1R b KQkq - 0 4"},
+		{"Bf8-e7", "r1bqk1nr/ppppbppp/8/4n3/3PP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5"},
+		{"d4-d5", "r1bqk1nr/ppppbppp/8/3Pn3/4P3/8/PPP2PPP/RNBQKB1R b KQkq - 0 5"},
+		{"c7-c5", "r1bqk1nr/pp1pbppp/8/2pPn3/4P3/8/PPP2PPP/RNBQKB1R w KQkq c6 0 6"},
+		{"d5xc6", "r1bqk1nr/pp1pbppp/2P5/4n3/4P3/8/PPP2PPP/RNBQKB1R b KQkq - 0 6"}, // e.p.
+		{"d7xc6", "r1bqk1nr/pp2bppp/2p5/4n3/4P3/8/PPP2PPP/RNBQKB1R w KQkq - 0 7"},
+		{"Bf1-d3", "r1bqk1nr/pp2bppp/2p5/4n3/4P3/3B4/PPP2PPP/RNBQK2R b KQkq - 1 7"},
+		{"Bc8-e6", "r2qk1nr/pp2bppp/2p1b3/4n3/4P3/3B4/PPP2PPP/RNBQK2R w KQkq - 2 8"},
+		{"O-O", "r2qk1nr/pp2bppp/2p1b3/4n3/4P3/3B4/PPP2PPP/RNBQ1RK1 b kq - 3 8"},
+		{"Ng8-f6", "r2qk2r/pp2bppp/2p1bn2/4n3/4P3/3B4/PPP2PPP/RNBQ1RK1 w kq - 4 9"},
+		{"Nb1-c3", "r2qk2r/pp2bppp/2p1bn2/4n3/4P3/2NB4/PPP2PPP/R1BQ1RK1 b kq - 5 9"},
+		{"Rh8-g8", "r2qk1r1/pp2bppp/2p1bn2/4n3/4P3/2NB4/PPP2PPP/R1BQ1RK1 w q - 6 10"},
+		{"a2-a3", "r2qk1r1/pp2bppp/2p1bn2/4n3/4P3/P1NB4/1PP2PPP/R1BQ1RK1 b q - 0 10"},
+		{"Qd8-d7", "r3k1r1/pp1qbppp/2p1bn2/4n3/4P3/P1NB4/1PP2PPP/R1BQ1RK1 w q - 1 11"},
+		{"Nc3-d5", "r3k1r1/pp1qbppp/2p1bn2/3Nn3/4P3/P2B4/1PP2PPP/R1BQ1RK1 b q - 2 11"},
+		{"O-O-O", "2kr2r1/pp1qbppp/2p1bn2/3Nn3/4P3/P2B4/1PP2PPP/R1BQ1RK1 w - - 3 12"}};
+
+	board_t board = DefaultBoard();
+	std::string defaultFen = DefaultBoard().fen();
+
+	for (int repeat = 0; repeat < 2; repeat++) {
+		INFO("Repeat " << repeat);
+		std::vector<temp_move_handle_t> handles;
+		for (size_t i = 0; i < game.size(); i++) {
+			auto& pair = game[i];
+			INFO("Ply " << i << ": " << pair.first);
+			move_t move = MoveFromLongNotation(board.playerToMove(), pair.first);
+			handles.emplace_back(board.doMoveTemp(move));
+			REQUIRE(board.fen() == pair.second);
+		}
+		// unwind the stack, checking that the board is in the correct state after each unmake
+		while (handles.size() > 0) {
+			handles.pop_back();
+			if (handles.size() > 0) {
+				REQUIRE(board.fen() == game[handles.size() - 1].second);
+			}
+		}
+		REQUIRE(board.fen() == defaultFen);
+		REQUIRE(board.historyHashes.size() == 0);
+		REQUIRE(board.lastIrreversibleMove == -1);
+	}
+}
+
 TEST_CASE("Test move generation", "[core]") {
 	{
 		// white to move
@@ -253,16 +304,18 @@ TEST_CASE("Test move generation", "[core]") {
 	}
 }
 
-TEST_CASE("Test history reset", "[core]") {
+TEST_CASE("Test history", "[core]") {
 	board_t board = DefaultBoard();
 	std::vector<std::string> moves = {"b1c3", "b8c6", "c3b1", "c6b8"};
 	for (size_t i = 0; i < moves.size(); i++) {
 		board.doMove(MoveFromUCI(board, moves[i]));
 		REQUIRE(board.historyHashes.size() == i + 1);
+		REQUIRE(board.lastIrreversibleMove == -1);
 	}
 	// make an irreversible move, check that the history is reset
 	board.doMove(MoveFromUCI(board, "e2e4"));
-	REQUIRE(board.historyHashes.size() == 0);
+	REQUIRE(board.historyHashes.size() == moves.size() + 1);
+	REQUIRE(board.lastIrreversibleMove == static_cast<int16_t>(moves.size()));
 }
 
 TEST_CASE("Test threefold repetition", "[core]") {
