@@ -51,9 +51,19 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 	player_t player = board.playerToMove();
 	result_t result = board.result();
 
+	if (result == WinResult(OtherPlayer(player))) {
+		// penalize mated positions by the number of plies to the checkmate
+		return evaluation_t{result, -CHECKMATE_SCORE + plies, {}};
+	} else if (result == result_t::draw) {
+		return evaluation_t{result, 0.0f, {}};
+	} else if (result == WinResult(player)) {
+		ABORT_F("Player to move cannot already have checkmate! result == WinResult(player)");
+	}
+
 	auto tt_entry = state.ttable.get(board);
 	float original_alpha = alpha;
 	if (tt_entry && tt_entry->depth >= depth) {
+		// TODO: normalize mate scores by search depth
 		switch (tt_entry->type) {
 			case transposition_table_t::entry_type_t::exact:
 				// TODO: load result from ttable
@@ -73,22 +83,12 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 	}
 
 	// TODO: add quiescence search
-	if (depth == 0 || result != result_t::none) {
-		if (result == result_t::none) {
-			float score = PositionHeuristic(board);
-			if (player == player_t::black) {
-				score = -score;
-			}
-			return evaluation_t{result, score, {}};
-		} else if (result == WinResult(OtherPlayer(player))) {
-			// penalize mated positions by the number of plies to the checkmate
-			return evaluation_t{result, -CHECKMATE_SCORE + plies, {}};
-		} else if (result == result_t::draw) {
-			return evaluation_t{result, 0.0f, {}};
-		} else {
-			ABORT_F(
-				"Player to move cannot already have checkmate! result == WinResult(player)");
+	if (depth == 0) {
+		float score = PositionHeuristic(board);
+		if (player == player_t::black) {
+			score = -score;
 		}
+		return evaluation_t{result, score, {}};
 	}
 
 	std::vector<move_t> moves = board.moves();
