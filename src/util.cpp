@@ -29,6 +29,8 @@ std::vector<std::string_view> split(std::string_view s, char delim) {
 board_t MakeBoard(const std::vector<std::string_view>& parts) {
 	std::vector<std::string_view> rowsRev = split(parts[0], '/');
 	board_t board;
+	board.white.fill(0);
+	board.black.fill(0);
 
 	int squareIdx = 0;
 	for (auto it = rowsRev.crbegin(); it < rowsRev.crend(); ++it) {

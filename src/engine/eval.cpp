@@ -33,8 +33,9 @@ evaluation_t operator-(evaluation_t&& a) {
 	return ret;
 }
 
-std::optional<evaluation_t> negamax(const board_t& board, const searchparams_t& params, int depth, int plies,
-					 float alpha, float beta, evalmetrics_t& metrics, evalstate_t& state) {
+std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params, int depth,
+									int plies, float alpha, float beta, evalmetrics_t& metrics,
+									evalstate_t& state) {
 	// update metrics
 	metrics.nodes++;
 
@@ -97,8 +98,9 @@ std::optional<evaluation_t> negamax(const board_t& board, const searchparams_t& 
 	evaluation_t best = {result, std::numeric_limits<float>::lowest(), {}};
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
-		board_t child = board.doMoveCopy(m);
-		auto candidateOpt = negamax(child, params, depth - 1, plies + 1, -beta, -alpha, metrics, state);
+		auto handle = board.doMoveTemp(m);
+		auto candidateOpt =
+			negamax(board, params, depth - 1, plies + 1, -beta, -alpha, metrics, state);
 		if (!candidateOpt) {
 			return std::nullopt;
 		}
@@ -133,11 +135,13 @@ void evalstate_deleter_t::operator()(evalstate_t* state) const {
 }
 
 evalstate_ptr_t CreateEvalState() {
-	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE), std::chrono::high_resolution_clock::now()});
+	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE),
+										   std::chrono::high_resolution_clock::now()});
 }
 
 std::pair<evaluation_t, evalmetrics_t>
 EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state) {
+	board_t boardCopy = board;
 	evalmetrics_t metrics;
 	float alpha = std::numeric_limits<float>::lowest();
 	float beta = std::numeric_limits<float>::max();
@@ -150,7 +154,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 
 	std::optional<evaluation_t> eval;
 	for (int d = 1; d <= params.maxDepth.value_or(std::numeric_limits<int>::max()); d++) {
-		auto evalOpt = negamax(board, params, d, 0, alpha, beta, metrics, state);
+		auto evalOpt = negamax(boardCopy, params, d, 0, alpha, beta, metrics, state);
 		if (!evalOpt) {
 			// we're terminating early (e.g. time limit) so break out
 			break;

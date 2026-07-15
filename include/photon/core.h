@@ -174,6 +174,14 @@ struct board_t {
 	bitboard_t occupancyMap(player_t player) const;
 
 	/**
+	 * @brief Creates a cheap partial copy of the chessboard state, omitting history-related
+	 * fields.
+	 * @note This is NOT a full copy, but is useful for temporary position-related operations.
+	 * @return A partial copy of the chessboard state
+	 */
+	board_t cheapCopy() const;
+
+	/**
 	 * @brief Performs a move on the chessboard state.
 	 * @param move The move to perform
 	 * @return The updated chessboard state after the move

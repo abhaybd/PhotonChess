@@ -13,10 +13,8 @@ using namespace photon::util;
 namespace photon {
 
 board_t::board_t()
-	: metadata(0), enPassant(-1), halfmoveClock(0), fullmove(1), hash(0), lastIrreversibleMove(-1) {
-	white.fill(0);
-	black.fill(0);
-}
+	: metadata(0), enPassant(-1), halfmoveClock(0), fullmove(1), hash(0),
+	  lastIrreversibleMove(-1) {}
 
 const std::array<bitboard_t, 6>& board_t::getBitboards(player_t player) const {
 	switch (player) {
@@ -179,6 +177,18 @@ bitboard_t board_t::occupancyMap(player_t player) const {
 		ret |= board;
 	}
 	return ret;
+}
+
+board_t board_t::cheapCopy() const {
+	board_t copy;
+	copy.white = white;
+	copy.black = black;
+	copy.metadata = metadata;
+	copy.enPassant = enPassant;
+	copy.halfmoveClock = halfmoveClock;
+	copy.fullmove = fullmove;
+	copy.hash = hash;
+	return copy;
 }
 
 board_t& board_t::doMove(move_t move) {
@@ -347,9 +357,10 @@ std::vector<move_t> board_t::moves() const {
 
 	std::vector<move_t> legalMoves;
 	legalMoves.reserve(moves.size());
+	board_t copy = this->cheapCopy();
 
 	for (move_t move : moves) {
-		board_t copy = doMoveCopy(move);
+		auto handle = copy.doMoveTemp(move);
 		if (!copy.inCheck(player)) {
 			legalMoves.push_back(move);
 		}
