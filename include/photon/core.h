@@ -280,6 +280,17 @@ struct move_t {
 	 */
 	std::optional<piece_t> getPromotion() const;
 
+	/**
+	 * @brief Checks if the move is reversible.
+	 *
+	 * A move is irreversible if it is a capture, a pawn move, or a move which loses castling
+	 * rights.
+	 *
+	 * @param board The chessboard state
+	 * @return True if the move is reversible, false otherwise
+	 */
+	bool isReversible(const board_t& board) const;
+
 	bool operator==(const move_t& other) const;
 	bool operator!=(const move_t& other) const;
 };

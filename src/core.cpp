@@ -436,6 +436,38 @@ std::optional<piece_t> move_t::getPromotion() const {
 	}
 }
 
+bool move_t::isReversible(const board_t& board) const {
+	if (isCapture) {
+		return false;
+	}
+
+	piece_t piece = getPiece(board);
+	if (piece == piece_t::pawn) {
+		return false;
+	}
+
+	if (piece == piece_t::king) {
+		player_t player = getPlayer(board);
+		bool canCastleK = board.hasCastlingRights(player, castle_t::king);
+		bool canCastleQ = board.hasCastlingRights(player, castle_t::queen);
+		return !canCastleK && !canCastleQ;
+	} else if (piece == piece_t::rook) {
+		player_t player = getPlayer(board);
+		if (((player == player_t::white && from == 0) ||
+			 (player == player_t::black && from == 56)) &&
+			board.hasCastlingRights(player, castle_t::queen)) {
+			return false;
+		}
+		if (((player == player_t::white && from == 7) ||
+			 (player == player_t::black && from == 63)) &&
+			board.hasCastlingRights(player, castle_t::king)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 bool move_t::operator==(const move_t& other) const {
 	return from == other.from && to == other.to;
 }
