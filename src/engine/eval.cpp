@@ -48,8 +48,11 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		}
 	}
 
+	// TODO: is there a way to check for terminal states without generating all moves?
+	std::vector<move_t> moves = board.moves();
+
 	player_t player = board.playerToMove();
-	result_t result = board.result();
+	result_t result = board.result(!moves.empty());
 
 	if (result == WinResult(OtherPlayer(player))) {
 		// penalize mated positions by the number of plies to the checkmate
@@ -91,7 +94,6 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		return evaluation_t{result, score, {}};
 	}
 
-	std::vector<move_t> moves = board.moves();
 	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
 	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, tt_move);
 

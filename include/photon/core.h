@@ -154,6 +154,14 @@ struct board_t {
 	result_t result() const;
 
 	/**
+	 * @brief Gets the result of the game.
+	 * @param hasLegalMoves If the player to move has legal moves. Used to avoid a call to
+	 * board_t::moves().
+	 * @return The result of the game
+	 */
+	result_t result(bool hasLegalMoves) const;
+
+	/**
 	 * @brief Gets the king square for a specific player.
 	 * @param player The player
 	 * @return The king square for the player

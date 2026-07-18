@@ -138,6 +138,10 @@ bool board_t::inCheck(player_t player) const {
 }
 
 result_t board_t::result() const {
+	return result(!moves().empty());
+}
+
+result_t board_t::result(bool hasLegalMoves) const {
 	player_t player = playerToMove();
 	// 50 move rule
 	if (halfmoveClock >= 100) {
@@ -157,7 +161,7 @@ result_t board_t::result() const {
 		}
 	}
 	// stalemate or checkmate
-	if (moves().empty()) {
+	if (!hasLegalMoves) {
 		return inCheck(player) ? WinResult(OtherPlayer(player)) : result_t::draw;
 	}
 	return result_t::none;
