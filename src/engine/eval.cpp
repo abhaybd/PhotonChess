@@ -37,8 +37,8 @@ evaluation_t operator-(evaluation_t&& a) {
 }
 
 std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params, int depth,
-									int plies, int16_t alpha, int16_t beta, evalmetrics_t& metrics,
-									evalstate_t& state) {
+									int plies, int16_t alpha, int16_t beta,
+									evalmetrics_t& metrics, evalstate_t& state) {
 	// update metrics
 	metrics.nodes++;
 

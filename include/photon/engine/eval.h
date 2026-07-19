@@ -39,9 +39,10 @@ evalstate_ptr_t CreateEvalState();
 
 int16_t PositionHeuristic(const board_t& board);
 
-std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, const searchparams_t& params);
+std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board,
+												 const searchparams_t& params);
 
-std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board, const searchparams_t& params,
-												 evalstate_t& state);
+std::pair<evaluation_t, evalmetrics_t>
+EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state);
 
 } // namespace photon::engine

@@ -100,7 +100,7 @@ void goCommand(const uci::arguments_t& args) {
 			if (args.find(incrementKey) != args.end()) {
 				increment = std::chrono::milliseconds(std::stoi(args.at(incrementKey)));
 			}
-	
+
 			// time management: 5% of remaining time + 50% of increment, min of 50ms
 			auto softTime = std::max(baseTime / 20, 50ms);
 			auto hardTime = std::max(baseTime / 20 + increment / 2, 50ms);
