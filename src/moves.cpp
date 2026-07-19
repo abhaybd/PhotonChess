@@ -256,7 +256,7 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 	bitboard_t king = board.getBitboard(player, piece_t::king);
 	bitboard_t playerOccupancy = board.occupancyMap(player);
 	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
-	DCHECK_F(king != 0 && king == (king & -king)); // only one king
+	DCHECK_F(king != 0 && std::has_single_bit(king)); // only one king
 
 	addMoves(shift(king, 8) & ~playerOccupancy, -8, enemyOccupancy, moves);
 	addMoves(shift(king, -8) & ~playerOccupancy, 8, enemyOccupancy, moves);

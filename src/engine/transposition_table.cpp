@@ -33,7 +33,7 @@ int16_t ScoreFromTT(int16_t score, int plies) {
 } // namespace
 
 transposition_table_t::transposition_table_t(size_t size) : table(size) {
-	CHECK_F(size == (size & -size), "Size must be a power of 2");
+	CHECK_F(std::has_single_bit(size), "Size must be a power of 2");
 }
 
 std::optional<transposition_table_t::entry_t> transposition_table_t::get(const board_t& board,

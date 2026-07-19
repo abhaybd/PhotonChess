@@ -40,7 +40,7 @@ int16_t GetPhase(const board_t& board) {
 		piece_t piece = ALL_PIECES[i];
 		bitboard_t bb = board.getBitboard(player_t::white, piece) |
 						board.getBitboard(player_t::black, piece);
-		phaseScore += PHASE_SCORE[i] * __builtin_popcountll(bb);
+		phaseScore += PHASE_SCORE[i] * std::popcount(bb);
 	}
 	int16_t phase = 24 - std::min(phaseScore, static_cast<int16_t>(24));
 	return phase;
