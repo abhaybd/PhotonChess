@@ -124,10 +124,14 @@ void goCommand(const uci::arguments_t& args) {
 	ss << " nodes " << metrics.nodes << " nps "
 	   << static_cast<int>(metrics.nodes / elapsed.count());
 	ss << " time " << elapsedMillis.count() << " score ";
-	if (result.result == util::WinResult(board->playerToMove())) {
-		ss << "mate " << result.moves.size();
-	} else if (result.result == util::WinResult(util::OtherPlayer(board->playerToMove()))) {
-		ss << "mate -" << result.moves.size();
+	// report mate in fullmoves or score
+	auto mateDist = engine::ScoreToMateDistance(result.score);
+	if (mateDist.has_value()) {
+		if (result.score > 0) {
+			ss << "mate " << (*mateDist + 1) / 2;
+		} else {
+			ss << "mate -" << (*mateDist + 1) / 2;
+		}
 	} else {
 		ss << "cp " << result.score;
 	}

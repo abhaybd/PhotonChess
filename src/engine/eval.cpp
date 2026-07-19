@@ -21,6 +21,9 @@ namespace {
 
 constexpr int16_t SCORE_INF = std::numeric_limits<int16_t>::max();
 constexpr int16_t CHECKMATE_SCORE = 30000; // should be < SCORE_INF
+constexpr int MAX_PLIES = 1000;
+// Any |score| >= this encodes a forced mate
+constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 20;
 constexpr int HARD_TIME_CHECK_INTERVAL = 10000;
 
@@ -59,21 +62,19 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 
 	if (result == WinResult(OtherPlayer(player))) {
 		// penalize mated positions by the number of plies to the checkmate
-		return evaluation_t{result, static_cast<int16_t>(-CHECKMATE_SCORE + plies), {}};
+		return evaluation_t{static_cast<int16_t>(-CHECKMATE_SCORE + plies), {}};
 	} else if (result == result_t::draw) {
-		return evaluation_t{result, 0, {}};
+		return evaluation_t{0, {}};
 	} else if (result == WinResult(player)) {
 		ABORT_F("Player to move cannot already have checkmate! result == WinResult(player)");
 	}
 
-	auto tt_entry = state.ttable.get(board);
+	auto tt_entry = state.ttable.get(board, plies);
 	int16_t original_alpha = alpha;
 	if (tt_entry && tt_entry->depth >= depth) {
-		// TODO: normalize mate scores by search depth
 		switch (tt_entry->type) {
 			case transposition_table_t::entry_type_t::exact:
-				// TODO: load result from ttable
-				return evaluation_t{result, tt_entry->score, {tt_entry->best_move}};
+				return evaluation_t{tt_entry->score, {tt_entry->best_move}};
 
 			case transposition_table_t::entry_type_t::lower_bound:
 				alpha = std::max(alpha, tt_entry->score);
@@ -84,7 +85,7 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 				break;
 		}
 		if (alpha >= beta) {
-			return evaluation_t{result, tt_entry->score, {tt_entry->best_move}};
+			return evaluation_t{tt_entry->score, {tt_entry->best_move}};
 		}
 	}
 
@@ -94,13 +95,13 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		if (player == player_t::black) {
 			score = -score;
 		}
-		return evaluation_t{result, score, {}};
+		return evaluation_t{score, {}};
 	}
 
 	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
 	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, tt_move);
 
-	evaluation_t best = {result, -SCORE_INF, {}};
+	evaluation_t best = {-SCORE_INF, {}};
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
 		auto handle = board.doMoveTemp(m);
@@ -128,7 +129,7 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 	} else {
 		entry_type = transposition_table_t::entry_type_t::exact;
 	}
-	state.ttable.set(board, depth, best.score, entry_type, best.moves.back());
+	state.ttable.set(board, depth, plies, best.score, entry_type, best.moves.back());
 
 	return best;
 }
@@ -158,7 +159,16 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 			"Soft time limit must be less than or equal to hard time limit");
 
 	std::optional<evaluation_t> eval;
-	for (int d = 1; d <= params.maxDepth.value_or(std::numeric_limits<int>::max()); d++) {
+	int maxDepth = MAX_PLIES;
+	if (params.maxDepth.has_value()) {
+		if (*params.maxDepth < MAX_PLIES) {
+			maxDepth = *params.maxDepth;
+		} else {
+			LOG_F(WARNING, "Requested max depth %d is greater than maximum allowable (%d)",
+				  *params.maxDepth, MAX_PLIES);
+		}
+	}
+	for (int d = 1; d <= maxDepth; d++) {
 		auto evalOpt = negamax(boardCopy, params, d, 0, alpha, beta, metrics, state);
 		if (!evalOpt) {
 			// we're terminating early (e.g. time limit) so break out
@@ -184,6 +194,16 @@ std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board,
 												 const searchparams_t& params) {
 	auto state = CreateEvalState();
 	return EvalBoard(board, params, *state);
+}
+
+std::optional<int> ScoreToMateDistance(int16_t score) {
+	if (score >= MATE_SCORE_BOUND) {
+		return CHECKMATE_SCORE - score;
+	} else if (score <= -MATE_SCORE_BOUND) {
+		return CHECKMATE_SCORE + score;
+	} else {
+		return std::nullopt;
+	}
 }
 
 } // namespace photon::engine

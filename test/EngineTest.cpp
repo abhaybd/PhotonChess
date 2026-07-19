@@ -29,7 +29,8 @@ TEST_CASE("Test mate in 1 ply", "[engine]") {
 
 	std::vector<move_t> solution = {MoveFromUCI(board, "h5f7")};
 
-	REQUIRE(eval.result == result_t::white_wins);
+	REQUIRE(eval.score > 0);
+	REQUIRE(ScoreToMateDistance(eval.score).has_value());
 	assertMovesEqual(eval.moves, solution);
 }
 
@@ -43,6 +44,7 @@ TEST_CASE("Test mate in 3 ply", "[engine]") {
 	std::vector<move_t> solution = {MoveFromUCI(board, "d2h6"), MoveFromUCI(board, "g7h6"),
 									MoveFromUCI(board, "h4f6")};
 
-	REQUIRE(eval.result == result_t::white_wins);
+	REQUIRE(eval.score > 0);
+	REQUIRE(ScoreToMateDistance(eval.score).has_value());
 	assertMovesEqual(eval.moves, solution);
 }

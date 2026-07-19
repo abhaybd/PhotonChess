@@ -27,9 +27,9 @@ public:
 
 	explicit transposition_table_t(size_t size);
 
-	std::optional<entry_t> get(const board_t& board) const;
+	std::optional<entry_t> get(const board_t& board, int plies) const;
 
-	void set(const board_t& board, int depth, int16_t score, entry_type_t type,
+	void set(const board_t& board, int depth, int plies, int16_t score, entry_type_t type,
 			 move_t best_move);
 
 private:

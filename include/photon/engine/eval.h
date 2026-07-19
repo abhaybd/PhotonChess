@@ -11,7 +11,6 @@
 namespace photon::engine {
 
 struct evaluation_t {
-	result_t result;
 	/** Score in centipawns */
 	int16_t score;
 	/** Principal variation in reverse order */
@@ -44,5 +43,13 @@ std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board,
 
 std::pair<evaluation_t, evalmetrics_t>
 EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state);
+
+/**
+ * @brief Get the mate distance from a score, if applicable.
+ *
+ * @param score The raw evaluation score
+ * @return std::optional<int> The mate distance in plies, or std::nullopt if not applicable.
+ */
+std::optional<int> ScoreToMateDistance(int16_t score);
 
 } // namespace photon::engine
