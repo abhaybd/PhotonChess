@@ -20,7 +20,7 @@ public:
 	struct entry_t {
 		uint64_t hash;
 		int depth;
-		float score;
+		int16_t score;
 		entry_type_t type;
 		move_t best_move;
 	};
@@ -29,7 +29,7 @@ public:
 
 	std::optional<entry_t> get(const board_t& board) const;
 
-	void set(const board_t& board, int depth, float score, entry_type_t type,
+	void set(const board_t& board, int depth, int16_t score, entry_type_t type,
 			 move_t best_move);
 
 private:

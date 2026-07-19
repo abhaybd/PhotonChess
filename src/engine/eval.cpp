@@ -19,7 +19,8 @@ struct evalstate_t {
 
 namespace {
 
-constexpr float CHECKMATE_SCORE = 10000.0f;
+constexpr int16_t SCORE_INF = std::numeric_limits<int16_t>::max();
+constexpr int16_t CHECKMATE_SCORE = 30000; // should be < SCORE_INF
 constexpr size_t TTABLE_SIZE = 1ULL << 20;
 constexpr int HARD_TIME_CHECK_INTERVAL = 10000;
 
@@ -29,12 +30,14 @@ bool operator<(const evaluation_t& a, const evaluation_t& b) {
 
 evaluation_t operator-(evaluation_t&& a) {
 	evaluation_t ret = std::move(a);
+	// -2^15 cannot be negated (since max int16 is 2^15 - 1)
+	DCHECK_F(ret.score != std::numeric_limits<int16_t>::lowest());
 	ret.score = -ret.score;
 	return ret;
 }
 
 std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params, int depth,
-									int plies, float alpha, float beta, evalmetrics_t& metrics,
+									int plies, int16_t alpha, int16_t beta, evalmetrics_t& metrics,
 									evalstate_t& state) {
 	// update metrics
 	metrics.nodes++;
@@ -56,15 +59,15 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 
 	if (result == WinResult(OtherPlayer(player))) {
 		// penalize mated positions by the number of plies to the checkmate
-		return evaluation_t{result, -CHECKMATE_SCORE + plies, {}};
+		return evaluation_t{result, static_cast<int16_t>(-CHECKMATE_SCORE + plies), {}};
 	} else if (result == result_t::draw) {
-		return evaluation_t{result, 0.0f, {}};
+		return evaluation_t{result, 0, {}};
 	} else if (result == WinResult(player)) {
 		ABORT_F("Player to move cannot already have checkmate! result == WinResult(player)");
 	}
 
 	auto tt_entry = state.ttable.get(board);
-	float original_alpha = alpha;
+	int16_t original_alpha = alpha;
 	if (tt_entry && tt_entry->depth >= depth) {
 		// TODO: normalize mate scores by search depth
 		switch (tt_entry->type) {
@@ -87,7 +90,7 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 
 	// TODO: add quiescence search
 	if (depth == 0) {
-		float score = PositionHeuristic(board);
+		int16_t score = PositionHeuristic(board);
 		if (player == player_t::black) {
 			score = -score;
 		}
@@ -97,7 +100,7 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
 	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, tt_move);
 
-	evaluation_t best = {result, std::numeric_limits<float>::lowest(), {}};
+	evaluation_t best = {result, -SCORE_INF, {}};
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
 		auto handle = board.doMoveTemp(m);
@@ -145,8 +148,8 @@ std::pair<evaluation_t, evalmetrics_t>
 EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state) {
 	board_t boardCopy = board;
 	evalmetrics_t metrics;
-	float alpha = std::numeric_limits<float>::lowest();
-	float beta = std::numeric_limits<float>::max();
+	int16_t alpha = -SCORE_INF;
+	int16_t beta = SCORE_INF;
 	state.startTime = std::chrono::high_resolution_clock::now();
 
 	CHECK_F(params.maxDepth.has_value() || params.maxTime.has_value(),

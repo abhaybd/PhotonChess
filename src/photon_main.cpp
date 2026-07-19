@@ -129,8 +129,7 @@ void goCommand(const uci::arguments_t& args) {
 	} else if (result.result == util::WinResult(util::OtherPlayer(board->playerToMove()))) {
 		ss << "mate -" << result.moves.size();
 	} else {
-		int score = static_cast<int>(result.score * 100.0f);
-		ss << "cp " << score;
+		ss << "cp " << result.score;
 	}
 	ss << " pv";
 	for (move_t move : result.moves) {

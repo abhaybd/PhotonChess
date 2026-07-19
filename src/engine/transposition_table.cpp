@@ -13,7 +13,7 @@ transposition_table_t::get(const board_t& board) const {
 	return (entry && entry->hash == board.hash) ? entry : std::nullopt;
 }
 
-void transposition_table_t::set(const board_t& board, int depth, float score,
+void transposition_table_t::set(const board_t& board, int depth, int16_t score,
 								entry_type_t type, move_t best_move) {
 	uint64_t hash = board.hash;
 	size_t idx = hash & (table.size() - 1);
