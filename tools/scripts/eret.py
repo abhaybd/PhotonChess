@@ -192,6 +192,11 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Print per-position results",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Limit the number of positions to evaluate",
+    )
     return parser.parse_args()
 
 
@@ -225,10 +230,11 @@ def main() -> None:
     total_depth = 0
     total_nodes = 0
     total_nps = 0
+    n = args.limit or len(POSITIONS)
     try:
         with ThreadPoolExecutor(max_workers=args.jobs) as executor:
-            futures = [executor.submit(eval_position, epd) for epd in POSITIONS]
-            with tqdm(total=len(POSITIONS), unit="pos") as pbar:
+            futures = [executor.submit(eval_position, epd) for epd in POSITIONS[:n]]
+            with tqdm(total=n, unit="pos") as pbar:
                 for future in as_completed(futures):
                     result = future.result()
                     if result.correct:
@@ -248,7 +254,6 @@ def main() -> None:
         for engine in engines:
             engine.close()
     elapsed = time.perf_counter() - start
-    n = len(POSITIONS)
 
     print(
         f"Result: TimePerPos={args.movetime}ms, {correct} / {n} ({correct / n:.0%}) in {elapsed:.2f}s "
