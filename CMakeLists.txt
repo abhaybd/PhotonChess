@@ -18,6 +18,8 @@ Include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 
+option(PHOTON_PROFILING_ENABLED "Enable the built-in scoped profiler (adds per-scope timing overhead)" OFF)
+
 # Logging with Loguru (wrap in function to limit scope)
 
 function(add_loguru)
@@ -55,6 +57,15 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(Catch2)
+
+# Profiling: when enabled, define PHOTON_PROFILING_ENABLED for all Photon targets defined
+# below. When disabled, the PHOTON_PROFILE_* macros compile to nothing (zero runtime cost).
+if(PHOTON_PROFILING_ENABLED)
+    add_compile_definitions(PHOTON_PROFILING_ENABLED)
+    message(STATUS "Photon profiling: ENABLED")
+else()
+    message(STATUS "Photon profiling: disabled")
+endif()
 
 add_library(photon_core STATIC)
 add_library(Photon::Core ALIAS photon_core)

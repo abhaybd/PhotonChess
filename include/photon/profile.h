@@ -71,6 +71,8 @@ struct scope_guard_t {
 
 } // namespace photon::profile
 
+#ifdef PHOTON_PROFILING_ENABLED
+
 // Profile the enclosing function. The scope id is resolved exactly once per call site via a
 // static local, so the hot path only touches an integer id.
 #define PHOTON_PROFILE_FUNCTION()                                                                  \
@@ -83,3 +85,11 @@ struct scope_guard_t {
 	static const ::photon::profile::scope_id_t _photon_scope_id =                                  \
 		::photon::profile::RegisterScope(name);                                                    \
 	::photon::profile::scope_guard_t _photon_scope_guard(_photon_scope_id)
+
+#else
+
+// Profiling compiled out: expand to nothing so there is zero runtime cost.
+#define PHOTON_PROFILE_FUNCTION() ((void)0)
+#define PHOTON_PROFILE_SCOPE(name) ((void)0)
+
+#endif // PHOTON_PROFILING_ENABLED

@@ -165,11 +165,15 @@ int main(int argc, char** argv) {
 	}
 	loguru::init(argc, argv);
 
-	// enable profiling if env var is set
+#ifdef PHOTON_PROFILING_ENABLED
+	// init profiling if enabled in this build
 	std::shared_ptr<profile::profiler_t> prof;
 	if (auto profileFile = std::getenv("PHOTON_PROFILE_FILE"); profileFile != nullptr) {
 		prof = profile::Init(profileFile);
+	} else {
+		prof = profile::Init();
 	}
+#endif
 
 	LOG_F(INFO, "Photon started");
 
