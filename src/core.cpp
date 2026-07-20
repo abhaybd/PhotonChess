@@ -1,6 +1,7 @@
 #include "photon/core.h"
 
 #include "moves.h"
+#include "photon/profile.h"
 #include "photon/util.h"
 #include "zobrist.h"
 
@@ -142,6 +143,8 @@ result_t board_t::result() const {
 }
 
 result_t board_t::result(bool hasLegalMoves) const {
+	PHOTON_PROFILE_FUNCTION();
+
 	player_t player = playerToMove();
 	// 50 move rule
 	if (halfmoveClock >= 100) {
@@ -356,6 +359,8 @@ temp_move_handle_t board_t::doMoveTemp(move_t move) {
 }
 
 std::vector<move_t> board_t::moves() const {
+	PHOTON_PROFILE_FUNCTION();
+
 	player_t player = playerToMove();
 	std::vector<move_t> moves = GenerateMoves(*this, player);
 

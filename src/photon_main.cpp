@@ -1,5 +1,6 @@
 #include "photon/core.h"
 #include "photon/engine/eval.h"
+#include "photon/profile.h"
 #include "photon/util.h"
 
 #include <iostream>
@@ -75,6 +76,8 @@ void positionCommand(const uci::arguments_t& args) {
 }
 
 void goCommand(const uci::arguments_t& args) {
+	PHOTON_PROFILE_FUNCTION();
+
 	LOG_SCOPE_F(INFO, "Received command: go");
 	LOG_F(INFO, "Args: %s", argsToStr(args).c_str());
 
@@ -161,6 +164,13 @@ int main(int argc, char** argv) {
 		loguru::add_file(logFile, loguru::Truncate, loguru::Verbosity_MAX);
 	}
 	loguru::init(argc, argv);
+
+	// enable profiling if env var is set
+	std::shared_ptr<profile::profiler_t> prof;
+	if (auto profileFile = std::getenv("PHOTON_PROFILE_FILE"); profileFile != nullptr) {
+		prof = profile::Init(profileFile);
+	}
+
 	LOG_F(INFO, "Photon started");
 
 	uci::Listener listener;

@@ -2,6 +2,7 @@
 
 #include "move_ordering.h"
 #include "photon/core.h"
+#include "photon/profile.h"
 #include "photon/util.h"
 #include "transposition_table.h"
 
@@ -42,6 +43,8 @@ evaluation_t operator-(evaluation_t&& a) {
 std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params, int depth,
 									int plies, int16_t alpha, int16_t beta,
 									evalmetrics_t& metrics, evalstate_t& state) {
+	PHOTON_PROFILE_FUNCTION();
+
 	// update metrics
 	metrics.nodes++;
 
@@ -147,6 +150,7 @@ evalstate_ptr_t CreateEvalState() {
 
 std::pair<evaluation_t, evalmetrics_t>
 EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state) {
+	PHOTON_PROFILE_FUNCTION();
 	board_t boardCopy = board;
 	evalmetrics_t metrics;
 	int16_t alpha = -SCORE_INF;

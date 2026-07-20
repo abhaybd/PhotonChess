@@ -1,5 +1,6 @@
 #include "moves.h"
 
+#include "photon/profile.h"
 #include "photon/util.h"
 
 #include <loguru.hpp>
@@ -80,6 +81,8 @@ bool IsAnyAttacked(const board_t& board, bitboard_t bb, player_t player) {
 } // namespace
 
 std::vector<move_t> GenerateMoves(const board_t& board, player_t player) {
+	PHOTON_PROFILE_FUNCTION();
+
 	bitboard_t playerOccupancy = board.occupancyMap(player);
 	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
 	bitboard_t occupancy = playerOccupancy | enemyOccupancy;
