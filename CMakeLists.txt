@@ -63,6 +63,7 @@ target_sources(photon_core PRIVATE
     src/util.cpp
     src/moves.cpp
     src/zobrist.cpp
+    src/profiling/profile.cpp
 )
 target_include_directories(photon_core PUBLIC "include")
 target_link_libraries(photon_core PRIVATE loguru::loguru)
