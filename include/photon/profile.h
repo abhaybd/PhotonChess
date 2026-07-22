@@ -37,7 +37,8 @@ std::shared_ptr<profiler_t> Init(std::string filename);
  * @param location The source location of the scope. Usually leave as the default value.
  * @return scope_id_t The id to pass to BeginScope/EndScope.
  */
-scope_id_t RegisterScope(const std::source_location& location = std::source_location::current());
+scope_id_t
+RegisterScope(const std::source_location& location = std::source_location::current());
 
 /**
  * @brief Register a profiled scope with an explicit (persistent, unique) name.
@@ -58,8 +59,12 @@ void EndScope(scope_id_t id);
  * Non-copyable and non-movable so that BeginScope/EndScope are always balanced.
  */
 struct scope_guard_t {
-	explicit scope_guard_t(scope_id_t id) : id_(id) { BeginScope(id_); }
-	~scope_guard_t() { EndScope(id_); }
+	explicit scope_guard_t(scope_id_t id) : id_(id) {
+		BeginScope(id_);
+	}
+	~scope_guard_t() {
+		EndScope(id_);
+	}
 
 	scope_guard_t(const scope_guard_t&) = delete;
 	scope_guard_t& operator=(const scope_guard_t&) = delete;
@@ -75,15 +80,15 @@ struct scope_guard_t {
 
 // Profile the enclosing function. The scope id is resolved exactly once per call site via a
 // static local, so the hot path only touches an integer id.
-#define PHOTON_PROFILE_FUNCTION()                                                                  \
-	static const ::photon::profile::scope_id_t _photon_scope_id =                                  \
-		::photon::profile::RegisterScope();                                                        \
+#define PHOTON_PROFILE_FUNCTION()                                                             \
+	static const ::photon::profile::scope_id_t _photon_scope_id =                             \
+		::photon::profile::RegisterScope();                                                   \
 	::photon::profile::scope_guard_t _photon_scope_guard(_photon_scope_id)
 
 // Profile a named scope. @p name must be a persistent, unique name.
-#define PHOTON_PROFILE_SCOPE(name)                                                                 \
-	static const ::photon::profile::scope_id_t _photon_scope_id =                                  \
-		::photon::profile::RegisterScope(name);                                                    \
+#define PHOTON_PROFILE_SCOPE(name)                                                            \
+	static const ::photon::profile::scope_id_t _photon_scope_id =                             \
+		::photon::profile::RegisterScope(name);                                               \
 	::photon::profile::scope_guard_t _photon_scope_guard(_photon_scope_id)
 
 #else

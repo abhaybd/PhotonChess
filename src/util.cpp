@@ -81,8 +81,8 @@ board_t MakeBoard(const std::vector<std::string_view>& parts) {
 		}
 	}
 
-	auto halfmoveRet =
-		std::from_chars(parts[4].data(), parts[4].data() + parts[4].size(), board.halfmoveClock);
+	auto halfmoveRet = std::from_chars(parts[4].data(), parts[4].data() + parts[4].size(),
+									   board.halfmoveClock);
 	CHECK_F(halfmoveRet.ec == std::errc{}, "Unable to parse halfmove clock string: %s",
 			std::string(parts[4]).c_str());
 	auto fullmoveRet =
