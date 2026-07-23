@@ -100,6 +100,7 @@ add_executable(tests
     test/MoveGenTest.cpp
     test/UtilTest.cpp
     test/EngineTest.cpp
+    test/perft.cpp
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain
