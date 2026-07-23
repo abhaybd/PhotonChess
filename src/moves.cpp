@@ -19,10 +19,16 @@ constexpr bitboard_t RANK_2_MASK = 0x000000000000FF00ULL;
 constexpr bitboard_t RANK_7_MASK = 0x00FF000000000000ULL;
 constexpr bitboard_t RANK_8_MASK = 0xFF00000000000000ULL;
 
+// Squares that must be empty for castling.
+// For kingside castling, these must also be unattacked.
 constexpr bitboard_t CASTLE_K_MASK_W = 0b01100000ULL;
 constexpr bitboard_t CASTLE_K_MASK_B = CASTLE_K_MASK_W << 56;
 constexpr bitboard_t CASTLE_Q_MASK_W = 0b00001110ULL;
 constexpr bitboard_t CASTLE_Q_MASK_B = CASTLE_Q_MASK_W << 56;
+
+// Squares which must be unattacked for queenside castling (excludes b-file)
+constexpr bitboard_t CASTLE_Q_ATTACK_MASK_W = 0b00001100ULL;
+constexpr bitboard_t CASTLE_Q_ATTACK_MASK_B = CASTLE_Q_ATTACK_MASK_W << 56;
 
 template <typename T>
 T shift(T x, int shift) {
@@ -276,6 +282,8 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 		bitboard_t occupancy = board.occupancyMap();
 		bitboard_t castleKMask = player == player_t::white ? CASTLE_K_MASK_W : CASTLE_K_MASK_B;
 		bitboard_t castleQMask = player == player_t::white ? CASTLE_Q_MASK_W : CASTLE_Q_MASK_B;
+		bitboard_t castleQAttackMask =
+			player == player_t::white ? CASTLE_Q_ATTACK_MASK_W : CASTLE_Q_ATTACK_MASK_B;
 		if (board.hasCastlingRights(player, castle_t::king) &&
 			(occupancy & castleKMask) == 0) {
 			DCHECK_F(from == (player == player_t::white ? 4 : 60));
@@ -290,7 +298,7 @@ void KingMoves(const board_t& board, player_t player, std::vector<move_t>& moves
 			DCHECK_F(from == (player == player_t::white ? 4 : 60));
 			DCHECK_F(CheckOccupancy(board.getBitboard(player, piece_t::rook),
 									player == player_t::white ? 0 : 56));
-			if (!IsAnyAttacked(board, castleQMask, otherPlayer)) {
+			if (!IsAnyAttacked(board, castleQAttackMask, otherPlayer)) {
 				moves.push_back(move_t{from, player == player_t::white ? 2_uc : 58_uc});
 			}
 		}
