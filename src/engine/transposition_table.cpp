@@ -53,8 +53,11 @@ void transposition_table_t::set(const board_t& board, int depth, int plies, int1
 								entry_type_t type, move_t best_move) {
 	uint64_t hash = board.hash;
 	size_t idx = hash & (table.size() - 1);
-	score = ScoreToTT(score, plies);
-	table[idx] = {hash, depth, score, type, best_move};
+	const auto& entry = table[idx];
+	if (!entry || depth >= entry->depth) {
+		score = ScoreToTT(score, plies);
+		table[idx] = {hash, depth, score, type, best_move};
+	}
 }
 
 } // namespace photon::engine
