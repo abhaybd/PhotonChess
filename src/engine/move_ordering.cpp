@@ -27,7 +27,7 @@ int MVV_LVA(piece_t attacker, piece_t victim) {
 } // namespace
 
 std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<move_t>& moves,
-									 std::optional<move_t> tt_move) {
+									 std::optional<move_t> tt_move, bool qSearch) {
 	std::vector<scoredmove_t> scoredMoves;
 	scoredMoves.reserve(moves.size());
 	for (move_t m : moves) {
@@ -41,7 +41,10 @@ std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<mov
 			score += 100;
 		}
 		// TODO: add killer heuristic
-		scoredMoves.push_back({m, score});
+		// if qsearch, only search captures and promotions
+		if (!qSearch || m.isCapture || m.isPromotion()) {
+			scoredMoves.push_back({m, score});
+		}
 	}
 	return scoredMoves;
 }

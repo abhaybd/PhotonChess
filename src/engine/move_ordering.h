@@ -18,10 +18,11 @@ struct scoredmove_t {
  * @param board The current board
  * @param moves The moves to score
  * @param tt_move The transposition table move to prioritize, if any
+ * @param qSearch If true, the moves are being scored for a quiescence search
  * @return std::vector<scoredmove_t> The scored moves, where higher is better
  */
 std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<move_t>& moves,
-									 std::optional<move_t> tt_move);
+									 std::optional<move_t> tt_move, bool qSearch);
 
 /**
  * @brief Select the best move to search from a list of scored moves, starting at @p startIdx

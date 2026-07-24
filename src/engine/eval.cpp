@@ -92,24 +92,34 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		}
 	}
 
-	// TODO: add quiescence search
-	if (depth == 0) {
+	bool qSearch =
+		depth <= 0 && !board.inCheck(player); // short-circuits so inCheck not always called
+	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
+	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, tt_move, qSearch);
+
+	evaluation_t best = {-SCORE_INF, {}};
+
+	if (qSearch) {
+		// stand pat in qsearch
 		int16_t score = PositionHeuristic(board);
 		if (player == player_t::black) {
 			score = -score;
 		}
-		return evaluation_t{score, {}};
+		if (score >= beta) {
+			return evaluation_t{score, {}};
+		}
+		if (score > alpha) {
+			alpha = score;
+		}
+		best.score = score;
 	}
 
-	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
-	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, tt_move);
-
-	evaluation_t best = {-SCORE_INF, {}};
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
 		auto handle = board.doMoveTemp(m);
+		int d = std::max(depth - 1, 0);
 		auto candidateOpt =
-			negamax(board, params, depth - 1, plies + 1, -beta, -alpha, metrics, state);
+			negamax(board, params, d, plies + 1, -beta, -alpha, metrics, state);
 		if (!candidateOpt) {
 			return std::nullopt;
 		}
@@ -124,15 +134,18 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		}
 	}
 
-	transposition_table_t::entry_type_t entry_type;
-	if (best.score <= original_alpha) {
-		entry_type = transposition_table_t::entry_type_t::upper_bound;
-	} else if (best.score >= beta) {
-		entry_type = transposition_table_t::entry_type_t::lower_bound;
-	} else {
-		entry_type = transposition_table_t::entry_type_t::exact;
+	// don't update ttable if standing pat in qsearch
+	if (!best.moves.empty()) {
+		transposition_table_t::entry_type_t entry_type;
+		if (best.score <= original_alpha) {
+			entry_type = transposition_table_t::entry_type_t::upper_bound;
+		} else if (best.score >= beta) {
+			entry_type = transposition_table_t::entry_type_t::lower_bound;
+		} else {
+			entry_type = transposition_table_t::entry_type_t::exact;
+		}
+		state.ttable.set(board, depth, plies, best.score, entry_type, best.moves.back());
 	}
-	state.ttable.set(board, depth, plies, best.score, entry_type, best.moves.back());
 
 	return best;
 }
