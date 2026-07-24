@@ -261,6 +261,11 @@ struct move_t {
 	bool isCapture;
 
 	/**
+	 * @brief Construct an uninitialized move object.
+	 */
+	move_t();
+
+	/**
 	 * @brief Constructor for a chess move.
 	 * @param from Starting square of the move
 	 * @param to Destination square of the move
