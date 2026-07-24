@@ -190,6 +190,16 @@ struct board_t {
 	board_t cheapCopy() const;
 
 	/**
+	 * @brief Performs a move on the chessboard state, optionally skipping metadata updates.
+	 *
+	 * @param move The move to perform
+	 * @param skipMetadata If true, the metadata updates will be skipped (useful if board will
+	 * e.g. be discarded)
+	 * @return The updated chessboard state after the move
+	 */
+	board_t& doMove(move_t move, bool skipMetadata);
+
+	/**
 	 * @brief Performs a move on the chessboard state.
 	 * @param move The move to perform
 	 * @return The updated chessboard state after the move
@@ -197,11 +207,15 @@ struct board_t {
 	board_t& doMove(move_t move);
 
 	/**
-	 * @brief Performs a move on a copy of the chessboard state.
+	 * @brief Temporarily perform a move on the chessboard state, which is unmade when the
+	 * returned handle is destroyed.
+	 *
 	 * @param move The move to perform
-	 * @return The updated chessboard state after the move
+	 * @param skipMetadata If true, the metadata updates will be skipped (useful if board will
+	 * e.g. be discarded)
+	 * @return A handle, which unmakes the move when destroyed
 	 */
-	board_t doMoveCopy(move_t move) const;
+	temp_move_handle_t doMoveTemp(move_t move, bool skipMetadata);
 
 	/**
 	 * @brief Temporarily perform a move on the chessboard state, which is unmade when the
@@ -333,7 +347,7 @@ struct move_t {
  */
 class temp_move_handle_t {
 public:
-	temp_move_handle_t(board_t* board, move_t move);
+	temp_move_handle_t(board_t* board, move_t move, bool skipMetadata);
 	temp_move_handle_t(const temp_move_handle_t& other) = delete;
 	temp_move_handle_t(temp_move_handle_t&& other) noexcept;
 	~temp_move_handle_t();
@@ -364,6 +378,7 @@ private:
 	board_t* board;
 	board_snapshot_t snapshot;
 	move_t move;
+	bool skipMetadata;
 
 	void unmakeMove();
 };

@@ -212,7 +212,7 @@ TEST_CASE("Test doMoveTemp", "[core]") {
 	std::string defaultFen = DefaultBoard().fen();
 
 	for (int repeat = 0; repeat < 2; repeat++) {
-		INFO("Repeat " << repeat);
+		CAPTURE(repeat);
 		std::vector<temp_move_handle_t> handles;
 		for (size_t i = 0; i < game.size(); i++) {
 			auto& pair = game[i];
@@ -223,7 +223,10 @@ TEST_CASE("Test doMoveTemp", "[core]") {
 		}
 		// unwind the stack, checking that the board is in the correct state after each unmake
 		while (handles.size() > 0) {
+			REQUIRE(board.historyHashes.size() == handles.size());
+			auto hash = board.historyHashes.back();
 			handles.pop_back();
+			REQUIRE(hash == board.hash);
 			if (handles.size() > 0) {
 				REQUIRE(board.fen() == game[handles.size() - 1].second);
 			}

@@ -199,12 +199,18 @@ board_t board_t::cheapCopy() const {
 }
 
 board_t& board_t::doMove(move_t move) {
+	return doMove(move, false);
+}
+
+board_t& board_t::doMove(move_t move, bool skipMetadata) {
 	DCHECK_F(move.getPlayer(*this) == playerToMove());
 
-	historyHashes.push_back(hash);
-	if (!move.isReversible(*this)) {
-		lastIrreversibleMove =
-			static_cast<decltype(lastIrreversibleMove)>(historyHashes.size() - 1);
+	if (!skipMetadata) {
+		historyHashes.push_back(hash);
+		if (!move.isReversible(*this)) {
+			lastIrreversibleMove =
+				static_cast<decltype(lastIrreversibleMove)>(historyHashes.size() - 1);
+		}
 	}
 
 	player_t player = playerToMove();
@@ -218,39 +224,50 @@ board_t& board_t::doMove(move_t move) {
 	bool isEP = move.isEnPassant(*this);
 	auto promotion = move.getPromotion();
 	uint8_t oldMetadata = metadata;
-	auto& zobrist = ZobristData();
+	const auto* zobrist = !skipMetadata ? &ZobristData() : nullptr;
 
 	if (captured && !isEP) {
 		DCHECK_F(move.isCapture);
 		DCHECK_F((getBitboard(otherPlayer, *captured) & (1ULL << move.to)) != 0);
 		getBitboard(otherPlayer, *captured) &= ~(1ULL << move.to);
-		hash ^= zobrist.pieceKeys[static_cast<int>(otherPlayer)][static_cast<int>(*captured)]
-								 [move.to];
 
-		// remove castling rights if rook is captured
-		if (*captured == piece_t::rook) {
-			if (move.to == 0) {
-				metadata &= ~0b10;
-			} else if (move.to == 7) {
-				metadata &= ~0b1;
-			} else if (move.to == 56) {
-				metadata &= ~0b1000;
-			} else if (move.to == 63) {
-				metadata &= ~0b100;
+		if (!skipMetadata) {
+			hash ^= zobrist->pieceKeys[static_cast<int>(otherPlayer)]
+									  [static_cast<int>(*captured)][move.to];
+
+			// remove castling rights if rook is captured
+			if (*captured == piece_t::rook) {
+				if (move.to == 0) {
+					metadata &= ~0b10;
+				} else if (move.to == 7) {
+					metadata &= ~0b1;
+				} else if (move.to == 56) {
+					metadata &= ~0b1000;
+				} else if (move.to == 63) {
+					metadata &= ~0b100;
+				}
 			}
 		}
 	}
 	bitboard_t& bb = getBitboard(player, piece);
 	bb &= ~(1ULL << move.from);
-	hash ^= zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(piece)][move.from];
+	if (!skipMetadata) {
+		hash ^=
+			zobrist->pieceKeys[static_cast<int>(player)][static_cast<int>(piece)][move.from];
+	}
 
 	if (promotion) {
 		getBitboard(player, *promotion) |= 1ULL << move.to;
-		hash ^=
-			zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(*promotion)][move.to];
+		if (!skipMetadata) {
+			hash ^= zobrist->pieceKeys[static_cast<int>(player)][static_cast<int>(*promotion)]
+									  [move.to];
+		}
 	} else {
 		bb |= 1ULL << move.to;
-		hash ^= zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(piece)][move.to];
+		if (!skipMetadata) {
+			hash ^=
+				zobrist->pieceKeys[static_cast<int>(player)][static_cast<int>(piece)][move.to];
+		}
 	}
 
 	// move rook if castling
@@ -266,11 +283,12 @@ board_t& board_t::doMove(move_t move) {
 		bitboard_t& rook = getBitboard(player, piece_t::rook);
 		rook &= ~(1ULL << rookFrom);
 		rook |= 1ULL << rookTo;
-		hash ^= zobrist.pieceKeys[static_cast<int>(player)][static_cast<int>(piece_t::rook)]
-								 [rookFrom];
-		hash ^=
-			zobrist
-				.pieceKeys[static_cast<int>(player)][static_cast<int>(piece_t::rook)][rookTo];
+		if (!skipMetadata) {
+			hash ^= zobrist->pieceKeys[static_cast<int>(player)]
+									  [static_cast<int>(piece_t::rook)][rookFrom];
+			hash ^= zobrist->pieceKeys[static_cast<int>(player)]
+									  [static_cast<int>(piece_t::rook)][rookTo];
+		}
 	}
 
 	// handle e.p. capture
@@ -280,82 +298,84 @@ board_t& board_t::doMove(move_t move) {
 		ep_square += player == player_t::white ? -8 : 8;
 		bitboard_t mask = 1ULL << ep_square;
 		pawn &= ~mask;
-		hash ^= zobrist.pieceKeys[static_cast<int>(otherPlayer)]
-								 [static_cast<int>(piece_t::pawn)][ep_square];
+		if (!skipMetadata) {
+			hash ^= zobrist->pieceKeys[static_cast<int>(otherPlayer)]
+									  [static_cast<int>(piece_t::pawn)][ep_square];
+		}
 	}
 
-	// update clocks
-	if (piece == piece_t::pawn || captured) {
-		halfmoveClock = 0;
-	} else {
-		halfmoveClock++;
-	}
-	if (player == player_t::black) {
-		fullmove++;
-	}
-
-	// toggle player to move
-	metadata ^= 1 << 4;
-	hash ^= zobrist.playerKey;
-
-	// remove castling rights if king moves
-	if (piece == piece_t::king) {
-		metadata &= ~(0b11 << (player == player_t::white ? 0 : 2));
-	}
-	// remove castling rights if rook moves
-	if (piece == piece_t::rook) {
-		if (player == player_t::white) {
-			if (move.from == 0) {
-				metadata &= ~0b10;
-			} else if (move.from == 7) {
-				metadata &= ~0b1;
-			}
+	if (!skipMetadata) {
+		// update clocks
+		if (piece == piece_t::pawn || captured) {
+			halfmoveClock = 0;
 		} else {
-			if (move.from == 56) {
-				metadata &= ~0b1000;
-			} else if (move.from == 63) {
-				metadata &= ~0b0100;
+			halfmoveClock++;
+		}
+		if (player == player_t::black) {
+			fullmove++;
+		}
+
+		// toggle player to move
+		metadata ^= 1 << 4;
+		hash ^= zobrist->playerKey;
+
+		// remove castling rights if king moves
+		if (piece == piece_t::king) {
+			metadata &= ~(0b11 << (player == player_t::white ? 0 : 2));
+		}
+		// remove castling rights if rook moves
+		if (piece == piece_t::rook) {
+			if (player == player_t::white) {
+				if (move.from == 0) {
+					metadata &= ~0b10;
+				} else if (move.from == 7) {
+					metadata &= ~0b1;
+				}
+			} else {
+				if (move.from == 56) {
+					metadata &= ~0b1000;
+				} else if (move.from == 63) {
+					metadata &= ~0b0100;
+				}
 			}
 		}
-	}
 
-	// update hash for castling rights changes
-	uint8_t castlingRightsDiff = 0b1111 & (oldMetadata ^ metadata);
-	for (int i = 0; i < 4; i++) {
-		if (castlingRightsDiff & (1 << i)) {
-			hash ^= zobrist.castleKeys[i];
+		// update hash for castling rights changes
+		uint8_t castlingRightsDiff = 0b1111 & (oldMetadata ^ metadata);
+		for (int i = 0; i < 4; i++) {
+			if (castlingRightsDiff & (1 << i)) {
+				hash ^= zobrist->castleKeys[i];
+			}
 		}
-	}
 
-	// handle e.p. rights
-	if (enPassant >= 0) {
-		// remove old e.p.
-		hash ^= zobrist.enPassantKeys[enPassant % 8];
-	}
-	enPassant = -1;
-	if (piece == piece_t::pawn &&
-		std::abs(static_cast<int>(move.from) - static_cast<int>(move.to)) == 16) {
-		bitboard_t row = 0xFFULL << (8 * (move.to / 8));
-		bitboard_t mask = 1ULL << move.to;
-		mask = ((mask << 1) | (mask >> 1)) & row;
-		// only set e.p. (and add to hash) if e.p. can be played
-		if (mask & getBitboard(otherPlayer, piece_t::pawn)) {
-			enPassant = player == player_t::white ? move.from + 8 : move.from - 8;
-			hash ^= zobrist.enPassantKeys[enPassant % 8];
+		// handle e.p. rights
+		if (enPassant >= 0) {
+			// remove old e.p.
+			hash ^= zobrist->enPassantKeys[enPassant % 8];
+		}
+		enPassant = -1;
+		if (piece == piece_t::pawn &&
+			std::abs(static_cast<int>(move.from) - static_cast<int>(move.to)) == 16) {
+			bitboard_t row = 0xFFULL << (8 * (move.to / 8));
+			bitboard_t mask = 1ULL << move.to;
+			mask = ((mask << 1) | (mask >> 1)) & row;
+			// only set e.p. (and add to hash) if e.p. can be played
+			if (mask & getBitboard(otherPlayer, piece_t::pawn)) {
+				enPassant = player == player_t::white ? move.from + 8 : move.from - 8;
+				hash ^= zobrist->enPassantKeys[enPassant % 8];
+			}
 		}
 	}
 
 	return *this;
 }
 
-board_t board_t::doMoveCopy(move_t move) const {
-	board_t copy = *this;
-	copy.doMove(move);
-	return copy;
+temp_move_handle_t board_t::doMoveTemp(move_t move, bool skipMetadata) {
+	return temp_move_handle_t(this, move, skipMetadata);
 }
 
 temp_move_handle_t board_t::doMoveTemp(move_t move) {
-	return temp_move_handle_t(this, move);
+	return doMoveTemp(move, false);
 }
 
 std::vector<move_t> board_t::moves() const {
@@ -369,7 +389,7 @@ std::vector<move_t> board_t::moves() const {
 	board_t copy = this->cheapCopy();
 
 	for (move_t move : moves) {
-		auto handle = copy.doMoveTemp(move);
+		auto handle = copy.doMoveTemp(move, true);
 		if (!copy.inCheck(player)) {
 			legalMoves.push_back(move);
 		}
@@ -528,8 +548,8 @@ bool move_t::operator!=(const move_t& other) const {
 	return !(*this == other);
 }
 
-temp_move_handle_t::temp_move_handle_t(board_t* board, move_t move)
-	: board(board), move(move) {
+temp_move_handle_t::temp_move_handle_t(board_t* board, move_t move, bool skipMetadata)
+	: board(board), move(move), skipMetadata(skipMetadata) {
 	snapshot.white = board->white;
 	snapshot.black = board->black;
 	snapshot.metadata = board->metadata;
@@ -538,11 +558,12 @@ temp_move_handle_t::temp_move_handle_t(board_t* board, move_t move)
 	snapshot.fullmove = board->fullmove;
 	snapshot.hash = board->hash;
 	snapshot.lastIrreversibleMove = board->lastIrreversibleMove;
-	board->doMove(move);
+	board->doMove(move, skipMetadata);
 }
 
 temp_move_handle_t::temp_move_handle_t(temp_move_handle_t&& other) noexcept
-	: board(other.board), snapshot(std::move(other.snapshot)), move(other.move) {
+	: board(other.board), snapshot(std::move(other.snapshot)), move(other.move),
+	  skipMetadata(other.skipMetadata) {
 	other.board = nullptr;
 }
 
@@ -557,8 +578,10 @@ void temp_move_handle_t::release() {
 void temp_move_handle_t::unmakeMove() {
 	if (board) {
 		// catches out-of-order unmake
-		DCHECK_F(!board->historyHashes.empty());
-		DCHECK_F(board->historyHashes.back() == snapshot.hash);
+		if (!skipMetadata) {
+			DCHECK_F(!board->historyHashes.empty());
+			DCHECK_F(board->historyHashes.back() == snapshot.hash);
+		}
 
 		board->white = snapshot.white;
 		board->black = snapshot.black;
@@ -568,7 +591,9 @@ void temp_move_handle_t::unmakeMove() {
 		board->fullmove = snapshot.fullmove;
 		board->hash = snapshot.hash;
 		board->lastIrreversibleMove = snapshot.lastIrreversibleMove;
-		board->historyHashes.pop_back();
+		if (!skipMetadata) {
+			board->historyHashes.pop_back();
+		}
 		board = nullptr;
 	}
 }
