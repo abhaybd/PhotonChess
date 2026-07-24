@@ -204,6 +204,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 			}
 		}
 	}
+	metrics.ttableUsage = state.ttable.getUsage();
 	CHECK_F(eval.has_value(), "Search terminated without returning a result");
 
 	std::vector<move_t> moves(eval->moves.crbegin(), eval->moves.crend());

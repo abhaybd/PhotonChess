@@ -129,7 +129,10 @@ void goCommand(const uci::arguments_t& args) {
 	ss << " depth " << metrics.depth;
 	ss << " nodes " << metrics.nodes << " nps "
 	   << static_cast<int>(metrics.nodes / elapsed.count());
-	ss << " time " << elapsedMillis.count() << " score ";
+	ss << " time " << elapsedMillis.count();
+	ss << " hashfull " << metrics.ttableUsage;
+
+	ss << " score ";
 	// report mate in fullmoves or score
 	auto mateDist = engine::ScoreToMateDistance(result.score);
 	if (mateDist.has_value()) {
@@ -141,6 +144,7 @@ void goCommand(const uci::arguments_t& args) {
 	} else {
 		ss << "cp " << result.score;
 	}
+
 	ss << " pv";
 	for (move_t move : result.moves) {
 		ss << " " << util::MoveToUCI(move);

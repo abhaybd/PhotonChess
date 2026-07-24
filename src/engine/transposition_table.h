@@ -31,6 +31,9 @@ public:
 	void set(const board_t& board, int depth, int plies, uint64_t rootPosHash, int16_t score,
 			 entry_type_t type, move_t best_move);
 
+	/** Get usage from 0 to 1000 */
+	int getUsage() const;
+
 private:
 	struct packed_move_t {
 		/** Start square */
@@ -60,6 +63,7 @@ private:
 	uint32_t packHash(uint64_t hash) const;
 
 	std::vector<packed_entry_t> table;
+	uint64_t numValidEntries;
 };
 
 } // namespace photon::engine

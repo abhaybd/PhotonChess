@@ -26,6 +26,7 @@ struct searchparams_t {
 struct evalmetrics_t {
 	int nodes = 0;
 	int depth = 0;
+	int ttableUsage = 0;
 };
 
 struct evalstate_t;

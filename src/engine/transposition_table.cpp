@@ -35,7 +35,7 @@ int16_t ScoreFromTT(int16_t score, int plies) {
 }
 } // namespace
 
-transposition_table_t::transposition_table_t(size_t size) : table(size) {
+transposition_table_t::transposition_table_t(size_t size) : table(size), numValidEntries(0) {
 	CHECK_F(std::has_single_bit(size), "Size must be a power of 2");
 }
 
@@ -58,8 +58,11 @@ void transposition_table_t::set(const board_t& board, int depth, int plies,
 	size_t idx = board.hash & (table.size() - 1);
 	const packed_entry_t& entry = table[idx];
 	uint16_t rootPosHashTrunc = static_cast<uint16_t>(rootPosHash & 0xFFFFULL);
-	if (!isEntryValid(entry) || depth >= entry.depth ||
-		rootPosHashTrunc != entry.rootPosHash) {
+	bool isNew = !isEntryValid(entry);
+	if (isNew || depth >= entry.depth || rootPosHashTrunc != entry.rootPosHash) {
+		if (isNew) {
+			numValidEntries++;
+		}
 		score = ScoreToTT(score, plies);
 		table[idx] = packed_entry_t{
 			packHash(board.hash),
@@ -70,6 +73,10 @@ void transposition_table_t::set(const board_t& board, int depth, int plies,
 			packMove(best_move),
 		};
 	}
+}
+
+int transposition_table_t::getUsage() const {
+	return static_cast<int>(numValidEntries * 1000 / table.size());
 }
 
 bool transposition_table_t::isEntryValid(const packed_entry_t& entry) const {
