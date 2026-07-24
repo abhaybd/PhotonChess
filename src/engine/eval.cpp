@@ -15,6 +15,8 @@ namespace photon::engine {
 
 struct evalstate_t {
 	transposition_table_t ttable;
+	/** Hash of the root position of the search */
+	uint64_t rootPosHash;
 	std::chrono::high_resolution_clock::time_point startTime;
 };
 
@@ -144,7 +146,8 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		} else {
 			entry_type = transposition_table_t::entry_type_t::exact;
 		}
-		state.ttable.set(board, depth, plies, best.score, entry_type, best.moves.back());
+		state.ttable.set(board, depth, plies, state.rootPosHash, best.score, entry_type,
+						 best.moves.back());
 	}
 
 	return best;
@@ -157,7 +160,7 @@ void evalstate_deleter_t::operator()(evalstate_t* state) const {
 }
 
 evalstate_ptr_t CreateEvalState() {
-	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE),
+	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE), 0ULL,
 										   std::chrono::high_resolution_clock::now()});
 }
 
@@ -169,6 +172,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	int16_t alpha = -SCORE_INF;
 	int16_t beta = SCORE_INF;
 	state.startTime = std::chrono::high_resolution_clock::now();
+	state.rootPosHash = board.hash;
 
 	CHECK_F(params.maxDepth.has_value() || params.maxTime.has_value(),
 			"Either maxDepth or maxTime must be specified");

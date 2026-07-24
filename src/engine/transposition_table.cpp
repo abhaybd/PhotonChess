@@ -49,14 +49,16 @@ std::optional<transposition_table_t::entry_t> transposition_table_t::get(const b
 	}
 }
 
-void transposition_table_t::set(const board_t& board, int depth, int plies, int16_t score,
-								entry_type_t type, move_t best_move) {
+void transposition_table_t::set(const board_t& board, int depth, int plies,
+								uint64_t rootPosHash, int16_t score, entry_type_t type,
+								move_t best_move) {
 	uint64_t hash = board.hash;
 	size_t idx = hash & (table.size() - 1);
 	const auto& entry = table[idx];
-	if (!entry || depth >= entry->depth) {
+	uint16_t rootPosHashTrunc = static_cast<uint16_t>(rootPosHash & 0xFFFF);
+	if (!entry || depth >= entry->depth || rootPosHashTrunc != entry->rootPosHash) {
 		score = ScoreToTT(score, plies);
-		table[idx] = {hash, depth, score, type, best_move};
+		table[idx] = {hash, depth, rootPosHashTrunc, score, type, best_move};
 	}
 }
 
