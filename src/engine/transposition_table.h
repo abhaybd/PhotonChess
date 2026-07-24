@@ -48,7 +48,7 @@ private:
 
 	struct packed_entry_t {
 		/** Upper 32 bits of the hash, sentinel 0 => invalid entry */
-		uint32_t hash;
+		uint32_t hash = 0;
 		uint8_t depth;
 		uint8_t type;
 		uint16_t rootPosHash;
