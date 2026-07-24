@@ -27,7 +27,7 @@ constexpr int16_t CHECKMATE_SCORE = 30000; // should be < SCORE_INF
 constexpr int MAX_PLIES = 1000;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
-constexpr size_t TTABLE_SIZE = 1ULL << 20;
+constexpr size_t TTABLE_SIZE = 1ULL << 22;
 constexpr int HARD_TIME_CHECK_INTERVAL = 10000;
 
 bool operator<(const evaluation_t& a, const evaluation_t& b) {
