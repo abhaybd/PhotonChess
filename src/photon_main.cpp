@@ -45,7 +45,10 @@ void positionCommand(const uci::arguments_t& args) {
 	// TODO: avoid resetting if board is already in the same position, and just apply moves
 	LOG_SCOPE_F(INFO, "Received command: position");
 	board.reset();
-	eval_state = engine::CreateEvalState();
+	// don't reset eval_state if it exists so we can reuse the transposition table if possible
+	if (!eval_state) {
+		eval_state = engine::CreateEvalState();
+	}
 
 	if (auto fenIt = args.find("fen"); fenIt != args.end()) {
 		LOG_F(INFO, "Initial FEN: %s", fenIt->second.c_str());
