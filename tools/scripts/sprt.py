@@ -34,6 +34,7 @@ def get_args():
     parser.add_argument("-a", "--alpha", type=float, default=0.05, help="Alpha level for SPRT")
     parser.add_argument("-b", "--beta", type=float, default=0.05, help="Beta level for SPRT")
     parser.add_argument("--elo-delta", type=float, default=5.0, help="Elo delta for SPRT (nElo if normalized, Elo if logistic)")
+    parser.add_argument("--regression", action="store_true", help="Run a regression test instead of gain test")
     parser.add_argument("--time-control", default="8+0.08")
     parser.add_argument("--sprt-model", default="logistic", choices=["normalized", "logistic"], help="SPRT model to use")
     return parser.parse_args()
@@ -92,6 +93,13 @@ def main():
         commit1, executable1 = future1.result()
         commit2, executable2 = future2.result()
 
+    if args.regression:
+        elo0 = -args.elo_delta
+        elo1 = 0
+    else:
+        elo0 = 0
+        elo1 = args.elo_delta
+
     subprocess.run(
         [
             str(args.fastchess),
@@ -104,7 +112,7 @@ def main():
             "-concurrency", str(args.jobs),
             "-recover",
             "-openings", f"file={args.opening_book}", "format=pgn",
-            "-sprt", "elo0=0", f"elo1={args.elo_delta}",
+            "-sprt", f"elo0={elo0}", f"elo1={elo1}",
                 f"alpha={args.alpha}", f"beta={args.beta}", f"model={args.sprt_model}",
         ],
         check=True,
