@@ -62,6 +62,8 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 	// TODO: is there a way to check for terminal states without generating all moves?
 	std::vector<move_t> moves = board.moves();
 
+	// TODO: implement null-move pruning
+	// TODO: implement aspiration window
 	player_t player = board.playerToMove();
 	result_t result = board.result(!moves.empty());
 
