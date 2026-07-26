@@ -4,9 +4,7 @@
 namespace photon::engine {
 
 killer_table_t::killer_table_t(size_t size) : killers(size), validKillers(size) {
-    for (auto& x : validKillers) {
-        x = 0;
-    }
+    reset();
 }
 
 void killer_table_t::add(move_t move, uint ply) {
@@ -39,6 +37,12 @@ bool killer_table_t::isKiller(move_t move, uint ply) const {
     const auto& moves = killers[ply];
     auto end = moves.begin() + validKillers[ply];
     return std::find(moves.begin(), end, move) != end;
+}
+
+void killer_table_t::reset() {
+    for (auto& x : validKillers) {
+        x = 0;
+    }
 }
 
 killer_table_t::killer_moves_t killer_table_t::getKillerMoves(uint ply) const {

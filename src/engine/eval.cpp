@@ -1,5 +1,6 @@
 #include "photon/engine/eval.h"
 
+#include "killer.h"
 #include "move_ordering.h"
 #include "photon/core.h"
 #include "photon/profile.h"
@@ -15,6 +16,7 @@ namespace photon::engine {
 
 struct evalstate_t {
 	transposition_table_t ttable;
+	killer_table_t killerTable;
 	/** Hash of the root position of the search */
 	uint64_t rootPosHash;
 	std::chrono::high_resolution_clock::time_point startTime;
@@ -25,6 +27,7 @@ namespace {
 constexpr int16_t SCORE_INF = std::numeric_limits<int16_t>::max();
 constexpr int16_t CHECKMATE_SCORE = 30000; // should be < SCORE_INF
 constexpr int MAX_PLIES = 1000;
+constexpr size_t KILLER_TABLE_SIZE = 20;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
@@ -99,7 +102,8 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 	bool qSearch =
 		depth <= 0 && !board.inCheck(player); // short-circuits so inCheck not always called
 	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
-	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, tt_move, qSearch);
+	auto killerMoves = state.killerTable.getKillerMoves(plies);
+	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, killerMoves, tt_move, qSearch);
 
 	evaluation_t best = {-SCORE_INF, {}};
 
@@ -133,7 +137,11 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 			best.moves.push_back(m);
 		}
 		alpha = std::max(alpha, best.score);
+		// beta cutoff
 		if (alpha >= beta) {
+			if (!m.isCapture) {
+				state.killerTable.add(m, plies);
+			}
 			break;
 		}
 	}
@@ -162,7 +170,8 @@ void evalstate_deleter_t::operator()(evalstate_t* state) const {
 }
 
 evalstate_ptr_t CreateEvalState() {
-	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE), 0ULL,
+	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE),
+										   killer_table_t(KILLER_TABLE_SIZE), 0ULL,
 										   std::chrono::high_resolution_clock::now()});
 }
 
@@ -175,6 +184,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	int16_t beta = SCORE_INF;
 	state.startTime = std::chrono::high_resolution_clock::now();
 	state.rootPosHash = board.hash;
+	state.killerTable.reset();
 
 	CHECK_F(params.maxDepth.has_value() || params.maxTime.has_value(),
 			"Either maxDepth or maxTime must be specified");

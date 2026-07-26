@@ -19,6 +19,7 @@ std::array<std::array<int, ALL_PIECES.size()>, ALL_PIECES.size()> mvv_lva = {
 	 {11, 21, 31, 41, 51, 0},	// queen
 	 {10, 20, 30, 40, 50, 0}}}; // king
 
+// guaranteed in range [0, 64), i.e. use 6 bits
 int MVV_LVA(piece_t attacker, piece_t victim) {
 	DCHECK_F(victim != piece_t::king);
 	return mvv_lva[static_cast<int>(attacker)][static_cast<int>(victim)];
@@ -26,21 +27,25 @@ int MVV_LVA(piece_t attacker, piece_t victim) {
 
 } // namespace
 
-std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<move_t>& moves,
-									 std::optional<move_t> tt_move, bool qSearch) {
+std::vector<scoredmove_t>
+ScoreMoves(const board_t& board, const std::vector<move_t>& moves,
+		   const killer_table_t::killer_moves_t& killerMoves,
+		   std::optional<move_t> tt_move, bool qSearch) {
 	std::vector<scoredmove_t> scoredMoves;
 	scoredMoves.reserve(moves.size());
 	for (move_t m : moves) {
-		int score = 0;
+		// LSB to MSB: 0=killer, 1-6=MVV-LVA, 7=TT move
+		uint score = 0;
 		if (m.isCapture) {
 			auto victimOpt = m.getCapturedPiece(board);
 			DCHECK_F(victimOpt.has_value());
-			score += MVV_LVA(m.getPiece(board), *victimOpt);
+			score += MVV_LVA(m.getPiece(board), *victimOpt) << 1;
+		} else if (std::find(killerMoves.begin(), killerMoves.end(), m) != killerMoves.end()) {
+			score += 1;
 		}
 		if (tt_move && m == *tt_move) {
-			score += 100;
+			score += 1 << 7;
 		}
-		// TODO: add killer heuristic
 		// if qsearch, only search captures and promotions
 		if (!qSearch || m.isCapture || m.isPromotion()) {
 			scoredMoves.push_back({m, score});

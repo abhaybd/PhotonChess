@@ -24,6 +24,8 @@ public:
 
     bool isKiller(move_t move, uint ply) const;
 
+    void reset();
+
 private:
     /** Maps plies to killer moves. */
     std::vector<std::array<move_t, NUM_KILLER_MOVES>> killers;

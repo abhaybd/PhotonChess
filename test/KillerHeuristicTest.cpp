@@ -8,6 +8,18 @@ using namespace photon;
 using namespace photon::util;
 using namespace photon::engine;
 
+namespace {
+
+bool isKiller(const killer_table_t& killerTable, move_t move, uint ply) {
+	bool isKiller = killerTable.isKiller(move, ply);
+	auto killerMoves = killerTable.getKillerMoves(ply);
+	bool isInRange = std::find(killerMoves.begin(), killerMoves.end(), move) != killerMoves.end();
+	REQUIRE(isKiller == isInRange);
+	return isKiller;
+}
+
+}
+
 TEST_CASE("Test killer table", "[engine]") {
 	killer_table_t killerTable(10);
 
@@ -17,17 +29,17 @@ TEST_CASE("Test killer table", "[engine]") {
 
 	killerTable.add(move1, 0);
 	killerTable.add(move2, 0);
-	REQUIRE(killerTable.isKiller(move1, 0));
-	REQUIRE(killerTable.isKiller(move2, 0));
-	REQUIRE(!killerTable.isKiller(move3, 0));
+	REQUIRE(isKiller(killerTable, move1, 0));
+	REQUIRE(isKiller(killerTable, move2, 0));
+	REQUIRE(!isKiller(killerTable, move3, 0));
 
 	killerTable.add(move3, 0);
-	REQUIRE(!killerTable.isKiller(move1, 0));
-	REQUIRE(killerTable.isKiller(move2, 0));
-	REQUIRE(killerTable.isKiller(move3, 0));
+	REQUIRE(!isKiller(killerTable, move1, 0));
+	REQUIRE(isKiller(killerTable, move2, 0));
+	REQUIRE(isKiller(killerTable, move3, 0));
 
 	killerTable.add(move3, 0);
-	REQUIRE(!killerTable.isKiller(move1, 0));
-	REQUIRE(killerTable.isKiller(move2, 0));
-	REQUIRE(killerTable.isKiller(move3, 0));
+	REQUIRE(!isKiller(killerTable, move1, 0));
+	REQUIRE(isKiller(killerTable, move2, 0));
+	REQUIRE(isKiller(killerTable, move3, 0));
 }
