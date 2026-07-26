@@ -87,6 +87,7 @@ target_sources(photon_engine PRIVATE
     src/engine/move_ordering.cpp
     src/engine/transposition_table.cpp
     src/engine/killer.cpp
+    src/engine/history.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)

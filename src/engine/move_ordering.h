@@ -1,5 +1,6 @@
 #pragma once
 
+#include "history.h"
 #include "killer.h"
 #include "photon/core.h"
 
@@ -10,7 +11,7 @@ namespace photon::engine {
  */
 struct scoredmove_t {
 	move_t move;
-	uint score;
+	int score;
 };
 
 /**
@@ -24,6 +25,7 @@ struct scoredmove_t {
  */
 std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<move_t>& moves,
 									 const killer_table_t::killer_moves_t& killerMoves,
+									 const history_table_t& historyTable,
 									 std::optional<move_t> tt_move, bool qSearch);
 
 /**

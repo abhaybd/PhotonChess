@@ -1,5 +1,6 @@
 #include "photon/engine/eval.h"
 
+#include "history.h"
 #include "killer.h"
 #include "move_ordering.h"
 #include "photon/core.h"
@@ -17,6 +18,7 @@ namespace photon::engine {
 struct evalstate_t {
 	transposition_table_t ttable;
 	killer_table_t killerTable;
+	history_table_t historyTable;
 	/** Hash of the root position of the search */
 	uint64_t rootPosHash;
 	std::chrono::high_resolution_clock::time_point startTime;
@@ -28,6 +30,8 @@ constexpr int16_t SCORE_INF = std::numeric_limits<int16_t>::max();
 constexpr int16_t CHECKMATE_SCORE = 30000; // should be < SCORE_INF
 constexpr int MAX_PLIES = 1000;
 constexpr size_t KILLER_TABLE_SIZE = 20;
+constexpr int16_t MAX_HISTORY_BONUS = 16384;
+constexpr int16_t HISTORY_DEPTH_FACTOR = 16;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
@@ -104,7 +108,7 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
 	auto killerMoves = state.killerTable.getKillerMoves(plies);
 	std::vector<scoredmove_t> scoredMoves =
-		ScoreMoves(board, moves, killerMoves, tt_move, qSearch);
+		ScoreMoves(board, moves, killerMoves, state.historyTable, tt_move, qSearch);
 
 	evaluation_t best = {-SCORE_INF, {}};
 
@@ -142,6 +146,15 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		if (alpha >= beta) {
 			if (!m.isCapture) {
 				state.killerTable.add(m, plies);
+				// apply history bonus to the move that caused the beta cutoff
+				state.historyTable.update(player, m, depth, true);
+				// apply history penalty to the quiet moves that were already searched
+				for (size_t j = 0; j < i; j++) {
+					auto quietMove = scoredMoves[j].move;
+					if (!quietMove.isCapture) {
+						state.historyTable.update(player, quietMove, depth, false);
+					}
+				}
 			}
 			break;
 		}
@@ -171,9 +184,10 @@ void evalstate_deleter_t::operator()(evalstate_t* state) const {
 }
 
 evalstate_ptr_t CreateEvalState() {
-	return evalstate_ptr_t(new evalstate_t{transposition_table_t(TTABLE_SIZE),
-										   killer_table_t(KILLER_TABLE_SIZE), 0ULL,
-										   std::chrono::high_resolution_clock::now()});
+	return evalstate_ptr_t(
+		new evalstate_t{transposition_table_t(TTABLE_SIZE), killer_table_t(KILLER_TABLE_SIZE),
+						history_table_t(MAX_HISTORY_BONUS, HISTORY_DEPTH_FACTOR), 0ULL,
+						std::chrono::high_resolution_clock::now()});
 }
 
 std::pair<evaluation_t, evalmetrics_t>
@@ -186,6 +200,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	state.startTime = std::chrono::high_resolution_clock::now();
 	state.rootPosHash = board.hash;
 	state.killerTable.reset();
+	state.historyTable.reset();
 
 	CHECK_F(params.maxDepth.has_value() || params.maxTime.has_value(),
 			"Either maxDepth or maxTime must be specified");

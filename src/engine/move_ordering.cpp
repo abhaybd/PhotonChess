@@ -29,21 +29,24 @@ int MVV_LVA(piece_t attacker, piece_t victim) {
 
 std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<move_t>& moves,
 									 const killer_table_t::killer_moves_t& killerMoves,
+									 const history_table_t& historyTable,
 									 std::optional<move_t> tt_move, bool qSearch) {
 	std::vector<scoredmove_t> scoredMoves;
 	scoredMoves.reserve(moves.size());
 	for (move_t m : moves) {
-		// LSB to MSB: 0=killer, 1-6=MVV-LVA, 7=TT move
-		uint score = 0;
+		// LSB to MSB: 0-15=history, 16=killer, 17-22=MVV-LVA, 23=TT move
+		int score = 0;
 		if (m.isCapture) {
 			auto victimOpt = m.getCapturedPiece(board);
 			DCHECK_F(victimOpt.has_value());
-			score += MVV_LVA(m.getPiece(board), *victimOpt) << 1;
+			score += MVV_LVA(m.getPiece(board), *victimOpt) << 17;
 		} else if (std::find(killerMoves.begin(), killerMoves.end(), m) != killerMoves.end()) {
-			score += 1;
+			score += 1 << 16;
+		} else {
+			score += historyTable.getHistoryScore(board.playerToMove(), m);
 		}
 		if (tt_move && m == *tt_move) {
-			score += 1 << 7;
+			score += 1 << 23;
 		}
 		// if qsearch, only search captures and promotions
 		if (!qSearch || m.isCapture || m.isPromotion()) {
