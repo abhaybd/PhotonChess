@@ -263,7 +263,7 @@ struct move_t {
 	/**
 	 * @brief Construct an uninitialized move object.
 	 */
-	move_t();
+	move_t() = default;
 
 	/**
 	 * @brief Constructor for a chess move.
