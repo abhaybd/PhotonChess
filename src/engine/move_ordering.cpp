@@ -27,10 +27,9 @@ int MVV_LVA(piece_t attacker, piece_t victim) {
 
 } // namespace
 
-std::vector<scoredmove_t>
-ScoreMoves(const board_t& board, const std::vector<move_t>& moves,
-		   const killer_table_t::killer_moves_t& killerMoves,
-		   std::optional<move_t> tt_move, bool qSearch) {
+std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<move_t>& moves,
+									 const killer_table_t::killer_moves_t& killerMoves,
+									 std::optional<move_t> tt_move, bool qSearch) {
 	std::vector<scoredmove_t> scoredMoves;
 	scoredMoves.reserve(moves.size());
 	for (move_t m : moves) {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "photon/core.h"
 #include "killer.h"
+#include "photon/core.h"
 
 namespace photon::engine {
 

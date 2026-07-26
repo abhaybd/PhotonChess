@@ -103,7 +103,8 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		depth <= 0 && !board.inCheck(player); // short-circuits so inCheck not always called
 	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
 	auto killerMoves = state.killerTable.getKillerMoves(plies);
-	std::vector<scoredmove_t> scoredMoves = ScoreMoves(board, moves, killerMoves, tt_move, qSearch);
+	std::vector<scoredmove_t> scoredMoves =
+		ScoreMoves(board, moves, killerMoves, tt_move, qSearch);
 
 	evaluation_t best = {-SCORE_INF, {}};
 

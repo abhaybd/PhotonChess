@@ -18,3 +18,4 @@ IncludeCategories:
 IndentCaseLabels: true
 PointerAlignment: Left
 AlwaysBreakTemplateDeclarations: Yes
+InsertNewlineAtEOF: true

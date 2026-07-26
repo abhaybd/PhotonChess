@@ -64,4 +64,4 @@ Photon can be built with profiling enabled, for debugging. To do so, add `-DPHOT
 
 ### Code Format
 
-See `.clang-format` for style rules. Code can be automatically formated with `clang-format`, or running `./format.sh`.
+See `.clang-format` for style rules. Code can be automatically formated with `clang-format`, or running `./format.sh`. Note that `clang-format` v16 or greater is required.
