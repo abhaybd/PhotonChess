@@ -108,12 +108,16 @@ class UCIEngine:
             raise RuntimeError("Engine exited unexpectedly")
         return line.strip()
 
-    def search(self, fen: str, movetime_ms: int) -> tuple[chess.Move, SearchStats]:
+    def search(self, fen: str, movetime_ms: int | None = None, depth: int | None = None) -> tuple[chess.Move, SearchStats]:
         self._send("ucinewgame")
         self._send("isready")
         self._wait_for("readyok")
         self._send(f"position fen {fen}")
-        self._send(f"go movetime {movetime_ms}")
+        if movetime_ms is not None:
+            self._send(f"go movetime {movetime_ms}")
+        else:
+            assert depth is not None
+            self._send(f"go depth {depth}")
 
         stats: SearchStats | None = None
         while True:
@@ -173,11 +177,15 @@ def get_args() -> argparse.Namespace:
         default=Path("../build/photon"),
         help="Path to the Photon UCI executable",
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--movetime",
         type=int,
         default=15000,
         help="Milliseconds of search time per position",
+    )
+    group.add_argument(
+        "--depth", type=int, help="Depth to search to"
     )
     parser.add_argument(
         "-j",
@@ -197,7 +205,10 @@ def get_args() -> argparse.Namespace:
         type=int,
         help="Limit the number of positions to evaluate",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.depth is not None:
+        args.movetime = None
+    return args
 
 
 def main() -> None:
@@ -215,7 +226,7 @@ def main() -> None:
         engine = idle.get()
         try:
             epd = parse_epd(epd_str)
-            move, stats = engine.search(epd.fen, args.movetime)
+            move, stats = engine.search(epd.fen, args.movetime, args.depth)
             return PositionResult(
                 id=epd.id,
                 correct=is_correct(epd, move),
@@ -256,7 +267,7 @@ def main() -> None:
     elapsed = time.perf_counter() - start
 
     print(
-        f"Result: TimePerPos={args.movetime}ms, {correct} / {n} ({correct / n:.0%}) in {elapsed:.2f}s "
+        f"Result: {correct} / {n} ({correct / n:.0%}) in {elapsed:.2f}s "
         f"({args.jobs} jobs)"
     )
     print(
