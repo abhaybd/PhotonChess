@@ -3,6 +3,7 @@
 #include "history.h"
 #include "killer.h"
 #include "move_ordering.h"
+#include "nullmove.h"
 #include "photon/core.h"
 #include "photon/profile.h"
 #include "photon/util.h"
@@ -38,6 +39,7 @@ constexpr int MAX_PLIES = 1000;
 constexpr size_t KILLER_TABLE_SIZE = 20;
 constexpr int16_t MAX_HISTORY_BONUS = 16384;
 constexpr int16_t HISTORY_DEPTH_FACTOR = 16;
+constexpr int NMP_REDUCTION = 3;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
@@ -56,7 +58,7 @@ evaluation_t operator-(evaluation_t&& a) {
 }
 
 std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params, int depth,
-									int plies, int16_t alpha, int16_t beta,
+									int plies, int16_t alpha, int16_t beta, bool justNullMoved,
 									evalmetrics_t& metrics, evalstate_t& state) {
 	PHOTON_PROFILE_FUNCTION();
 
@@ -75,7 +77,6 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 	// TODO: is there a way to check for terminal states without generating all moves?
 	std::vector<move_t> moves = board.moves();
 
-	// TODO: implement null-move pruning
 	// TODO: implement aspiration window
 	player_t player = board.playerToMove();
 	result_t result = board.result(!moves.empty());
@@ -109,8 +110,7 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		}
 	}
 
-	bool qSearch =
-		depth <= 0 && !board.inCheck(player); // short-circuits so inCheck not always called
+	bool qSearch = !justNullMoved && depth <= 0 && !board.inCheck(player);
 	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
 	auto killerMoves = state.killerTable.getKillerMoves(plies);
 	std::vector<scoredmove_t> scoredMoves =
@@ -131,6 +131,19 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 			alpha = score;
 		}
 		best.score = score;
+	} else if (!justNullMoved && depth >= NMP_REDUCTION && CanNullMove(board)) {
+		// do null-move pruning in non-qsearch
+		auto nmHandle = doNullMoveTemp(board);
+		int d = depth - NMP_REDUCTION;
+		auto candidateOpt =
+			negamax(board, params, d, plies + 1, -beta, -beta + 1, true, metrics, state);
+		if (!candidateOpt) {
+			return std::nullopt;
+		}
+		auto candidate = -(*std::move(candidateOpt));
+		if (candidate.score >= beta) {
+			return evaluation_t{candidate.score, {}};
+		}
 	}
 
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
@@ -138,7 +151,7 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		auto handle = board.doMoveTemp(m);
 		int d = std::max(depth - 1, 0);
 		auto candidateOpt =
-			negamax(board, params, d, plies + 1, -beta, -alpha, metrics, state);
+			negamax(board, params, d, plies + 1, -beta, -alpha, false, metrics, state);
 		if (!candidateOpt) {
 			return std::nullopt;
 		}
@@ -224,7 +237,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 		}
 	}
 	for (int d = 1; d <= maxDepth; d++) {
-		auto evalOpt = negamax(boardCopy, params, d, 0, alpha, beta, metrics, state);
+		auto evalOpt = negamax(boardCopy, params, d, 0, alpha, beta, false, metrics, state);
 		if (!evalOpt) {
 			// we're terminating early (e.g. time limit) so break out
 			break;
