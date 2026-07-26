@@ -86,6 +86,7 @@ target_sources(photon_engine PRIVATE
     src/engine/heuristic.cpp
     src/engine/move_ordering.cpp
     src/engine/transposition_table.cpp
+    src/engine/killer.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
@@ -101,6 +102,7 @@ add_executable(tests
     test/UtilTest.cpp
     test/EngineTest.cpp
     test/perft.cpp
+    test/KillerHeuristicTest.cpp
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain
