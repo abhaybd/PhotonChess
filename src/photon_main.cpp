@@ -151,6 +151,7 @@ void goCommand(const uci::arguments_t& args) {
 	}
 	LOG_F(INFO, "Sending info: %s", ss.str().c_str());
 	std::cout << ss.str() << std::endl;
+	CHECK_F(result.moves.size() > 0, "No moves found!");
 	std::cout << "bestmove " << util::MoveToUCI(result.moves[0]) << std::endl;
 }
 

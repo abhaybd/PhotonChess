@@ -89,6 +89,7 @@ target_sources(photon_engine PRIVATE
     src/engine/killer.cpp
     src/engine/history.cpp
     src/engine/nullmove.cpp
+    src/engine/aspiration.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
@@ -105,6 +106,7 @@ add_executable(tests
     test/EngineTest.cpp
     test/perft.cpp
     test/KillerHeuristicTest.cpp
+    test/AspirationWindowTest.cpp
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain

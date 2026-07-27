@@ -1,5 +1,6 @@
 #include "photon/engine/eval.h"
 
+#include "aspiration.h"
 #include "history.h"
 #include "killer.h"
 #include "move_ordering.h"
@@ -40,6 +41,8 @@ constexpr size_t KILLER_TABLE_SIZE = 20;
 constexpr int16_t MAX_HISTORY_BONUS = 16384;
 constexpr int16_t HISTORY_DEPTH_FACTOR = 16;
 constexpr int NMP_REDUCTION = 3;
+constexpr int ASPIRATION_WINDOW_DELTA = 50; // initial window half-size, centipawns
+constexpr int ASPIRATION_MIN_DEPTH = 3;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
@@ -86,7 +89,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 	// TODO: is there a way to check for terminal states without generating all moves?
 	std::vector<move_t> moves = board.moves();
 
-	// TODO: implement aspiration window
+	// TODO: implement endgame tablebases
 	player_t player = board.playerToMove();
 	result_t result = board.result(!moves.empty());
 
@@ -259,8 +262,6 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	PHOTON_PROFILE_FUNCTION();
 	board_t boardCopy = board;
 	evalmetrics_t metrics;
-	int16_t alpha = -SCORE_INF;
-	int16_t beta = SCORE_INF;
 	state.startTime = clock::now();
 	state.rootPosHash = board.hash;
 	state.killerTable.reset();
@@ -281,15 +282,33 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 				  *params.maxDepth, MAX_PLIES);
 		}
 	}
+
+	aspiration_window_t aspiration(ASPIRATION_WINDOW_DELTA, ASPIRATION_MIN_DEPTH, SCORE_INF,
+								   MATE_SCORE_BOUND);
 	for (int d = 1; d <= maxDepth; d++) {
-		auto evalOpt =
-			pvs<true>(boardCopy, params, d, 0, alpha, beta, false, true, metrics, state);
+		std::optional<evaluation_t> evalOpt;
+		bool reSearch = false;
+		do {
+			auto [alpha, beta] = aspiration.getWindow();
+			evalOpt = pvs<true>(boardCopy, params, d, 0, alpha, beta, false, true, metrics, state);
+			if (evalOpt) {
+				reSearch = aspiration.update(d, evalOpt->score);
+				if (reSearch) {
+					auto newWindow = aspiration.getWindow();
+					LOG_F(INFO,
+						  "Score %d failed at depth %d, re-searching with window [%d, %d]",
+						  evalOpt->score, d, newWindow.first, newWindow.second);
+				}
+			}
+		} while (evalOpt && reSearch);
 		if (!evalOpt) {
 			// we're terminating early (e.g. time limit) so break out
 			break;
 		}
 		eval = std::move(evalOpt);
 		metrics.depth = d;
+		LOG_F(INFO, "Searched at depth %d with score %d, nodes=%d", d, eval->score,
+			  metrics.nodes);
 		if (params.maxTime) {
 			auto elapsed = clock::now() - state.startTime;
 			if (elapsed >= params.maxTime->first) {

@@ -5,6 +5,7 @@ Photon is a UCI-compliant chess engine written from scratch in C++! It uses nega
 - Transposition Table (also for move ordering)
 - Quiescence Search
 - Null-Move Pruning
+- Aspiration Windows
 - MVV-LVA capture move ordering
 - Killer Heuristic
 - History Heuristic (with history gravity and malus)
