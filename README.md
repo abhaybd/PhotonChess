@@ -1,6 +1,14 @@
 # PhotonChess
 
-Chess engine written in C++, built for easy integration.
+Photon is a UCI-compliant chess engine written from scratch in C++! It uses negamax search with alpha-beta pruning, tapered piece-square table static evaluation, and the following search optimizations:
+- Iterative Deepening
+- Transposition Table (also for move ordering)
+- Quiescence Search
+- Null-Move Pruning
+- MVV-LVA capture move ordering
+- Killer Heuristic
+- History Heuristic (with history gravity and malus)
+- Soft/Hard Time Management
 
 ## Environment Variables
 
@@ -18,7 +26,7 @@ You can play against Photon in a GUI with [cutechess](https://github.com/cuteche
 
 ## Development
 
-To configure and build:
+Photon is developed with C++20. To configure and build:
 
 ```bash
 mkdir -p build ; cd build
