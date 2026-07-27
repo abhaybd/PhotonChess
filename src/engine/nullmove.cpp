@@ -29,6 +29,10 @@ temp_nullmove_handle_t::temp_nullmove_handle_t(board_t* board)
 	}
 	board->metadata ^= 1 << 4;
 	board->hash ^= zobrist.playerKey;
+	if (board->enPassant >= 0) {
+		board->hash ^= zobrist.enPassantKeys[board->enPassant % 8];
+		board->enPassant = -1;
+	}
 }
 
 temp_nullmove_handle_t::temp_nullmove_handle_t(temp_nullmove_handle_t&& other) noexcept

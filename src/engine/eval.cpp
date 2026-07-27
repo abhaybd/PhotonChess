@@ -110,12 +110,16 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		}
 	}
 
-	bool qSearch = !justNullMoved && depth <= 0 && !board.inCheck(player);
-	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
-	auto killerMoves = state.killerTable.getKillerMoves(plies);
-	std::vector<scoredmove_t> scoredMoves =
-		ScoreMoves(board, moves, killerMoves, state.historyTable, tt_move, qSearch);
+	if (justNullMoved && depth <= 0) {
+		// don't allow going from nullmove to qsearch, so return static eval if needed
+		int16_t score = PositionHeuristic(board);
+		if (player == player_t::black) {
+			score = -score;
+		}
+		return evaluation_t{score, {}};
+	}
 
+	bool qSearch = depth <= 0 && !board.inCheck(player);
 	evaluation_t best = {-SCORE_INF, {}};
 
 	if (qSearch) {
@@ -131,8 +135,10 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 			alpha = score;
 		}
 		best.score = score;
-	} else if (!justNullMoved && depth >= NMP_REDUCTION && CanNullMove(board)) {
-		// do null-move pruning in non-qsearch
+	}
+
+	// do null-move pruning
+	if (!justNullMoved && depth >= NMP_REDUCTION && CanNullMove(board)) {
 		auto nmHandle = doNullMoveTemp(board);
 		int d = depth - NMP_REDUCTION;
 		auto candidateOpt =
@@ -142,9 +148,17 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		}
 		auto candidate = -(*std::move(candidateOpt));
 		if (candidate.score >= beta) {
+			if (candidate.score >= MATE_SCORE_BOUND) {
+				candidate.score = beta;
+			}
 			return evaluation_t{candidate.score, {}};
 		}
 	}
+
+	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
+	auto killerMoves = state.killerTable.getKillerMoves(plies);
+	std::vector<scoredmove_t> scoredMoves =
+		ScoreMoves(board, moves, killerMoves, state.historyTable, tt_move, qSearch);
 
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
