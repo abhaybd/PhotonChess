@@ -33,6 +33,7 @@ std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<mov
 									 std::optional<move_t> tt_move, bool qSearch) {
 	std::vector<scoredmove_t> scoredMoves;
 	scoredMoves.reserve(moves.size());
+	// TODO: implement SEE for good/bad capture ordering
 	for (move_t m : moves) {
 		// LSB to MSB: 0-15=history, 16=killer, 17-22=MVV-LVA, 23=TT move
 		int score = 0;
@@ -49,6 +50,7 @@ std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<mov
 			score += 1 << 23;
 		}
 		// if qsearch, only search captures and promotions
+		// TODO: in qsearch, use SEE to filter captures
 		if (!qSearch || m.isCapture || m.isPromotion()) {
 			scoredMoves.push_back({m, score});
 		}
