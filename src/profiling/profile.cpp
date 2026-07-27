@@ -11,13 +11,13 @@
 #include <photon/profile.h>
 
 using std::chrono::duration_cast;
-using std::chrono::high_resolution_clock;
 using std::chrono::milliseconds;
 using namespace std::chrono_literals;
 
 namespace photon::profile {
 namespace {
 
+using clock = std::chrono::steady_clock;
 using duration_t = std::chrono::nanoseconds;
 
 struct profile_data_t {
@@ -34,7 +34,7 @@ struct profile_data_t {
 /** A single live frame on the profiling call stack. */
 struct stack_frame_t {
 	scope_id_t id;
-	high_resolution_clock::time_point start;
+	clock::time_point start;
 	/** Time spent in this frame's direct children, used to derive self time. */
 	duration_t childtime = 0ns;
 };
@@ -81,7 +81,7 @@ profiler_t* g_profiler = nullptr;
 
 struct profiler_t {
 	profiler_t(std::string filename)
-		: filename(filename), startTime(high_resolution_clock::now()) {}
+		: filename(filename), startTime(clock::now()) {}
 	~profiler_t() {
 		std::vector<std::pair<std::string, profile_data_t>> sortedScopeData;
 		for (scope_id_t id = 0; id < scopeData.size(); id++) {
@@ -94,7 +94,7 @@ struct profiler_t {
 		std::reverse(sortedScopeData.begin(), sortedScopeData.end());
 
 		auto totalElapsed =
-			duration_cast<milliseconds>(high_resolution_clock::now() - startTime);
+			duration_cast<milliseconds>(clock::now() - startTime);
 		std::ofstream file(filename);
 		file << "Total elapsed: " << totalElapsed.count() << "ms\n";
 		file << "Ordered by: cumulative time\n\n";
@@ -118,7 +118,7 @@ struct profiler_t {
 	}
 
 	const std::string filename;
-	high_resolution_clock::time_point startTime;
+	clock::time_point startTime;
 	std::vector<profile_data_t> scopeData;
 	std::vector<stack_frame_t> scopeStack;
 };
@@ -163,7 +163,7 @@ void BeginScope(scope_id_t id) {
 	auto& data = prof->scopeData[id];
 	data.count++;
 	data.active++;
-	prof->scopeStack.push_back({id, high_resolution_clock::now(), 0ns});
+	prof->scopeStack.push_back({id, clock::now(), 0ns});
 }
 
 void EndScope(scope_id_t id) {
@@ -171,7 +171,7 @@ void EndScope(scope_id_t id) {
 	if (!prof) {
 		return;
 	}
-	auto now = high_resolution_clock::now();
+	auto now = clock::now();
 
 	CHECK_F(!prof->scopeStack.empty() && prof->scopeStack.back().id == id,
 			"Scope stack mismatch");

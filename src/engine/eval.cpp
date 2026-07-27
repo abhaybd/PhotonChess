@@ -13,6 +13,12 @@
 
 using namespace photon::util;
 
+namespace {
+
+using clock = std::chrono::steady_clock;
+
+}
+
 namespace photon::engine {
 
 struct evalstate_t {
@@ -21,7 +27,7 @@ struct evalstate_t {
 	history_table_t historyTable;
 	/** Hash of the root position of the search */
 	uint64_t rootPosHash;
-	std::chrono::high_resolution_clock::time_point startTime;
+	clock::time_point startTime;
 };
 
 namespace {
@@ -59,7 +65,7 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 
 	// enforce time limit
 	if (params.maxTime && metrics.nodes % HARD_TIME_CHECK_INTERVAL == 0) {
-		auto elapsed = std::chrono::high_resolution_clock::now() - state.startTime;
+		auto elapsed = clock::now() - state.startTime;
 		if (elapsed >= params.maxTime->second) {
 			LOG_F(INFO, "Hard time limit reached, stopping search");
 			return std::nullopt;
@@ -187,7 +193,7 @@ evalstate_ptr_t CreateEvalState() {
 	return evalstate_ptr_t(
 		new evalstate_t{transposition_table_t(TTABLE_SIZE), killer_table_t(KILLER_TABLE_SIZE),
 						history_table_t(MAX_HISTORY_BONUS, HISTORY_DEPTH_FACTOR), 0ULL,
-						std::chrono::high_resolution_clock::now()});
+						clock::now()});
 }
 
 std::pair<evaluation_t, evalmetrics_t>
@@ -197,7 +203,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	evalmetrics_t metrics;
 	int16_t alpha = -SCORE_INF;
 	int16_t beta = SCORE_INF;
-	state.startTime = std::chrono::high_resolution_clock::now();
+	state.startTime = clock::now();
 	state.rootPosHash = board.hash;
 	state.killerTable.reset();
 	state.historyTable.reset();
@@ -226,7 +232,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 		eval = evalOpt;
 		metrics.depth = d;
 		if (params.maxTime) {
-			auto elapsed = std::chrono::high_resolution_clock::now() - state.startTime;
+			auto elapsed = clock::now() - state.startTime;
 			if (elapsed >= params.maxTime->first) {
 				break;
 			}

@@ -117,9 +117,9 @@ void goCommand(const uci::arguments_t& args) {
 	// TODO: add support for infinite search
 	CHECK_F(args.find("infinite") == args.end(), "Infinite search not supported");
 
-	auto start = std::chrono::high_resolution_clock::now();
+	auto start = std::chrono::steady_clock::now();
 	auto [result, metrics] = engine::EvalBoard(*board, params, *eval_state);
-	auto end = std::chrono::high_resolution_clock::now();
+	auto end = std::chrono::steady_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
