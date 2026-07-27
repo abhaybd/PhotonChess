@@ -80,8 +80,7 @@ profiler_t* g_profiler = nullptr;
 } // namespace
 
 struct profiler_t {
-	profiler_t(std::string filename)
-		: filename(filename), startTime(clock::now()) {}
+	profiler_t(std::string filename) : filename(filename), startTime(clock::now()) {}
 	~profiler_t() {
 		std::vector<std::pair<std::string, profile_data_t>> sortedScopeData;
 		for (scope_id_t id = 0; id < scopeData.size(); id++) {
@@ -93,8 +92,7 @@ struct profiler_t {
 		std::sort(sortedScopeData.begin(), sortedScopeData.end(), sort_profile_by_cumtime());
 		std::reverse(sortedScopeData.begin(), sortedScopeData.end());
 
-		auto totalElapsed =
-			duration_cast<milliseconds>(clock::now() - startTime);
+		auto totalElapsed = duration_cast<milliseconds>(clock::now() - startTime);
 		std::ofstream file(filename);
 		file << "Total elapsed: " << totalElapsed.count() << "ms\n";
 		file << "Ordered by: cumulative time\n\n";

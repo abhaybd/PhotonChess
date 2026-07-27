@@ -217,10 +217,9 @@ void evalstate_deleter_t::operator()(evalstate_t* state) const {
 }
 
 evalstate_ptr_t CreateEvalState() {
-	return evalstate_ptr_t(
-		new evalstate_t{transposition_table_t(TTABLE_SIZE), killer_table_t(KILLER_TABLE_SIZE),
-						history_table_t(MAX_HISTORY_BONUS, HISTORY_DEPTH_FACTOR), 0ULL,
-						clock::now()});
+	return evalstate_ptr_t(new evalstate_t{
+		transposition_table_t(TTABLE_SIZE), killer_table_t(KILLER_TABLE_SIZE),
+		history_table_t(MAX_HISTORY_BONUS, HISTORY_DEPTH_FACTOR), 0ULL, clock::now()});
 }
 
 std::pair<evaluation_t, evalmetrics_t>
