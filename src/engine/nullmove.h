@@ -25,6 +25,7 @@ private:
 	uint64_t hash;
 	int fullmove;
 	int8_t enPassant;
+	int16_t lastIrreversibleMove;
 };
 
 } // namespace photon::engine

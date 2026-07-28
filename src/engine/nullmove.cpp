@@ -20,7 +20,8 @@ temp_nullmove_handle_t doNullMoveTemp(board_t& board) {
 }
 
 temp_nullmove_handle_t::temp_nullmove_handle_t(board_t* board)
-	: board(board), hash(board->hash), fullmove(board->fullmove), enPassant(board->enPassant) {
+	: board(board), hash(board->hash), fullmove(board->fullmove), enPassant(board->enPassant),
+	  lastIrreversibleMove(board->lastIrreversibleMove) {
 	const auto& zobrist = util::ZobristData();
 
 	board->halfmoveClock++;
@@ -33,11 +34,14 @@ temp_nullmove_handle_t::temp_nullmove_handle_t(board_t* board)
 		board->hash ^= zobrist.enPassantKeys[board->enPassant % 8];
 		board->enPassant = -1;
 	}
+	board->historyHashes.push_back(hash);
+	// nullmoves are irreversible, to prevent spurious 3-fold repetition draws
+	board->lastIrreversibleMove = board->historyHashes.size() - 1;
 }
 
 temp_nullmove_handle_t::temp_nullmove_handle_t(temp_nullmove_handle_t&& other) noexcept
 	: board(other.board), hash(other.hash), fullmove(other.fullmove),
-	  enPassant(other.enPassant) {
+	  enPassant(other.enPassant), lastIrreversibleMove(other.lastIrreversibleMove) {
 	other.board = nullptr;
 }
 temp_nullmove_handle_t::~temp_nullmove_handle_t() {
@@ -47,6 +51,8 @@ temp_nullmove_handle_t::~temp_nullmove_handle_t() {
 		board->enPassant = enPassant;
 		board->halfmoveClock--;
 		board->metadata ^= 1 << 4;
+		board->lastIrreversibleMove = lastIrreversibleMove;
+		board->historyHashes.pop_back();
 	}
 }
 
