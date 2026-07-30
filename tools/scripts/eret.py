@@ -45,6 +45,7 @@ class PositionResult:
     id: str
     correct: bool
     move: str
+    expected: str
     stats: SearchStats
 
 
@@ -121,7 +122,10 @@ class UCIEngine:
 
         stats: SearchStats | None = None
         while True:
-            line = self._readline()
+            try:
+                line = self._readline()
+            except Exception as e:
+                raise RuntimeError(f"Engine exited unexpectedly for fen {fen}") from e
             if line.startswith("info "):
                 parsed = _parse_info_stats(line)
                 if parsed is not None:
@@ -227,10 +231,15 @@ def main() -> None:
         try:
             epd = parse_epd(epd_str)
             move, stats = engine.search(epd.fen, args.movetime, args.depth)
+            if epd.best_moves:
+                expected = " ".join(sorted(m.uci() for m in epd.best_moves))
+            else:
+                expected = " ".join(f"!{m.uci()}" for m in sorted(epd.avoid_moves, key=lambda m: m.uci()))
             return PositionResult(
                 id=epd.id,
                 correct=is_correct(epd, move),
                 move=move.uci(),
+                expected=expected,
                 stats=stats,
             )
         finally:
@@ -244,9 +253,17 @@ def main() -> None:
     n = args.limit or len(POSITIONS)
     try:
         with ThreadPoolExecutor(max_workers=args.jobs) as executor:
-            futures = [executor.submit(eval_position, epd) for epd in POSITIONS[:n]]
+            future_to_index = {
+                executor.submit(eval_position, epd): i
+                for i, epd in enumerate(POSITIONS[:n])
+            }
+            # Buffer out-of-order completions so verbose output stays in
+            # position order, flushing as soon as the next in-order result lands.
+            pending: dict[int, PositionResult] = {}
+            next_to_print = 0
             with tqdm(total=n, unit="pos") as pbar:
-                for future in as_completed(futures):
+                for future in as_completed(future_to_index):
+                    index = future_to_index[future]
                     result = future.result()
                     if result.correct:
                         correct += 1
@@ -254,11 +271,19 @@ def main() -> None:
                     total_nodes += result.stats.nodes
                     total_nps += result.stats.nps
                     if args.verbose:
-                        status = "ok" if result.correct else "fail"
-                        tqdm.write(
-                            f"{status} {result.id}: {result.move} "
-                            f"(d={result.stats.depth} n={result.stats.nodes} nps={result.stats.nps})"
-                        )
+                        pending[index] = result
+                        while next_to_print in pending:
+                            ordered = pending.pop(next_to_print)
+                            status = "ok" if ordered.correct else "fail"
+                            got = ordered.move
+                            if not ordered.correct:
+                                got = f"{ordered.move} (expected {ordered.expected})"
+                            tqdm.write(
+                                f"{status} {ordered.id}: {got} "
+                                f"(d={ordered.stats.depth} n={ordered.stats.nodes} "
+                                f"nps={ordered.stats.nps})"
+                            )
+                            next_to_print += 1
                     pbar.set_postfix(correct=correct)
                     pbar.update(1)
     finally:
