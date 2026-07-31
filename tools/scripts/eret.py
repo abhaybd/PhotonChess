@@ -18,8 +18,10 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import chess
+from git import Repo
 from tqdm import tqdm
 
 os.environ["PHOTON_DISABLE_LOGGING"] = "1"
@@ -148,6 +150,48 @@ class UCIEngine:
             self._proc.kill()
 
 
+def find_repo_root(path: Path) -> Path:
+    path = path.resolve()
+    while not (path / ".git").exists():
+        if path == path.parent:
+            raise ValueError(f"No .git directory found in {path}")
+        path = path.parent
+    return path
+
+
+def clone_and_build(builds_dir: Path, commit: str) -> Path:
+    repo_root = find_repo_root(Path(__file__).parent)
+    repo = Repo(repo_root)
+    git_url = repo.remote().url
+
+    commit_hash: str = repo.git.rev_parse(commit)
+    build_dir = builds_dir / commit_hash
+    executable_path = build_dir / "photon"
+
+    # If we've already built the engine, shortcut
+    if executable_path.exists():
+        return executable_path
+
+    with TemporaryDirectory() as temp_dir:
+        repo = Repo.clone_from(git_url, temp_dir)
+        repo.git.checkout(commit)
+        build_dir.mkdir(exist_ok=True)
+
+        subprocess.run(
+            ["cmake", "-B", str(build_dir), "-DCMAKE_BUILD_TYPE=Release"],
+            cwd=temp_dir,
+            check=True,
+        )
+        subprocess.run(
+            ["cmake", "--build", str(build_dir), "--target", "photon", "-j", str((os.cpu_count() or 2) // 2)],
+            cwd=temp_dir,
+            check=True,
+        )
+
+    assert executable_path.exists(), f"Engine executable not found at {executable_path}"
+    return executable_path
+
+
 def parse_epd(epd_str: str) -> EPD:
     board = chess.Board()
     # python-chess expects space-separated SAN moves; some ERET EPDs use commas.
@@ -175,11 +219,22 @@ def get_args() -> argparse.Namespace:
         description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
+    engine_group = parser.add_mutually_exclusive_group()
+    engine_group.add_argument(
         "--engine",
         type=Path,
         default=Path("../build/photon"),
         help="Path to the Photon UCI executable",
+    )
+    engine_group.add_argument(
+        "--commit",
+        help="Build the engine from this commit and run the ERET on it",
+    )
+    parser.add_argument(
+        "--builds-dir",
+        type=Path,
+        default=Path("builds"),
+        help="Directory to store engines built from --commit",
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -217,7 +272,12 @@ def get_args() -> argparse.Namespace:
 
 def main() -> None:
     args = get_args()
-    engine_path = args.engine.resolve()
+    if args.commit is not None:
+        builds_dir = args.builds_dir.resolve()
+        builds_dir.mkdir(parents=True, exist_ok=True)
+        engine_path = clone_and_build(builds_dir, args.commit).resolve()
+    else:
+        engine_path = args.engine.resolve()
     if not engine_path.exists():
         raise SystemExit(f"Engine not found: {engine_path}")
 
