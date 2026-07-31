@@ -139,7 +139,8 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 
 	// do null-move pruning
 	// TODO: add eval >= beta condition?
-	if (plies > 0 && !justNullMoved && depth >= NMP_REDUCTION && CanNullMove(board)) {
+	bool isPV = beta - alpha > 1;
+	if (!isPV && !justNullMoved && depth >= NMP_REDUCTION && CanNullMove(board)) {
 		auto nmHandle = doNullMoveTemp(board);
 		int d = depth - NMP_REDUCTION;
 		auto candidateOpt =
