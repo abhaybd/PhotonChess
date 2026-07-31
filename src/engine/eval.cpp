@@ -57,9 +57,17 @@ evaluation_t operator-(evaluation_t&& a) {
 	return ret;
 }
 
-std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params, int depth,
-									int plies, int16_t alpha, int16_t beta, bool justNullMoved,
-									evalmetrics_t& metrics, evalstate_t& state) {
+std::optional<evaluation_t> operator-(std::optional<evaluation_t>&& a) {
+	if (!a) {
+		return std::nullopt;
+	}
+	return -std::move(*a);
+}
+
+template <bool isPV>
+std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, int depth,
+								int plies, int16_t alpha, int16_t beta, bool justNullMoved,
+								evalmetrics_t& metrics, evalstate_t& state) {
 	PHOTON_PROFILE_FUNCTION();
 
 	// update metrics
@@ -139,21 +147,19 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 
 	// do null-move pruning
 	// TODO: add eval >= beta condition?
-	bool isPV = beta - alpha > 1;
 	if (!isPV && !justNullMoved && depth >= NMP_REDUCTION && CanNullMove(board)) {
 		auto nmHandle = doNullMoveTemp(board);
 		int d = depth - NMP_REDUCTION;
-		auto candidateOpt =
-			negamax(board, params, d, plies + 1, -beta, -beta + 1, true, metrics, state);
-		if (!candidateOpt) {
+		auto candidate =
+			-pvs<false>(board, params, d, plies + 1, -beta, -beta + 1, true, metrics, state);
+		if (!candidate) {
 			return std::nullopt;
 		}
-		auto candidate = -(*std::move(candidateOpt));
-		if (candidate.score >= beta) {
-			if (candidate.score >= MATE_SCORE_BOUND) {
-				candidate.score = beta;
+		if (candidate->score >= beta) {
+			if (candidate->score >= MATE_SCORE_BOUND) {
+				candidate->score = beta;
 			}
-			return evaluation_t{candidate.score, {}};
+			return evaluation_t{candidate->score, {}};
 		}
 	}
 
@@ -166,14 +172,23 @@ std::optional<evaluation_t> negamax(board_t& board, const searchparams_t& params
 		move_t m = SelectMove(scoredMoves, i);
 		auto handle = board.doMoveTemp(m);
 		int d = std::max(depth - 1, 0);
-		auto candidateOpt =
-			negamax(board, params, d, plies + 1, -beta, -alpha, false, metrics, state);
-		if (!candidateOpt) {
+		std::optional<evaluation_t> candidate;
+		if (i == 0) {
+			candidate =
+				-pvs<isPV>(board, params, d, plies + 1, -beta, -alpha, false, metrics, state);
+		} else {
+			candidate = -pvs<false>(board, params, d, plies + 1, -alpha - 1, -alpha, false,
+									metrics, state);
+			if (isPV && candidate && candidate->score > alpha) {
+				candidate = -pvs<true>(board, params, d, plies + 1, -beta, -alpha, false,
+									   metrics, state);
+			}
+		}
+		if (!candidate) {
 			return std::nullopt;
 		}
-		auto candidate = -(*std::move(candidateOpt));
-		if (best < candidate) {
-			best = std::move(candidate);
+		if (best < *candidate) {
+			best = std::move(*candidate);
 			best.moves.push_back(m);
 		}
 		alpha = std::max(alpha, best.score);
@@ -252,12 +267,12 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 		}
 	}
 	for (int d = 1; d <= maxDepth; d++) {
-		auto evalOpt = negamax(boardCopy, params, d, 0, alpha, beta, false, metrics, state);
+		auto evalOpt = pvs<true>(boardCopy, params, d, 0, alpha, beta, false, metrics, state);
 		if (!evalOpt) {
 			// we're terminating early (e.g. time limit) so break out
 			break;
 		}
-		eval = evalOpt;
+		eval = std::move(evalOpt);
 		metrics.depth = d;
 		if (params.maxTime) {
 			auto elapsed = clock::now() - state.startTime;
