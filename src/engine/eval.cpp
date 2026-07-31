@@ -100,7 +100,8 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 
 	auto tt_entry = state.ttable.get(board, plies);
 	int16_t original_alpha = alpha;
-	if (tt_entry && tt_entry->depth >= depth) {
+	// disable TT cutoffs on PV nodes, since that causes scout results to prune PV branches
+	if (!isPV && tt_entry && tt_entry->depth >= depth) {
 		switch (tt_entry->type) {
 			case transposition_table_t::entry_type_t::exact:
 				return evaluation_t{tt_entry->score, {tt_entry->best_move}};
