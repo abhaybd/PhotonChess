@@ -292,7 +292,8 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 		bool reSearch = false;
 		do {
 			auto [alpha, beta] = aspiration.getWindow();
-			evalOpt = pvs<true>(boardCopy, params, d, 0, alpha, beta, false, true, metrics, state);
+			evalOpt =
+				pvs<true>(boardCopy, params, d, 0, alpha, beta, false, true, metrics, state);
 			if (evalOpt) {
 				reSearch = aspiration.update(d, evalOpt->score);
 				if (reSearch) {
