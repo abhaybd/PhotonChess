@@ -192,6 +192,8 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		int d = std::max(depth - 1, 0);
 		std::optional<evaluation_t> candidate;
 		if (i == 0) {
+			// TODO: if candidate->score < alpha && plies == 0, consider skipping the rest of
+			// the moves and re-searching with an expanded window
 			candidate = -pvs<isPV>(board, params, d, plies + 1, -beta, -alpha, false,
 								   allowNullMove, metrics, state);
 		} else {
