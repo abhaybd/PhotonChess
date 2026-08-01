@@ -115,7 +115,10 @@ void goCommand(const uci::arguments_t& args) {
 	}
 
 	// TODO: add support for infinite search
+	// TODO: add support for number of nodes limitation
 	CHECK_F(args.find("infinite") == args.end(), "Infinite search not supported");
+	CHECK_F(args.find("nodes") == args.end(), "Nodes limitation not supported");
+	CHECK_F(args.find("mate") == args.end(), "Mate search not supported");
 
 	auto start = std::chrono::steady_clock::now();
 	auto [result, metrics] = engine::EvalBoard(*board, params, *eval_state);
