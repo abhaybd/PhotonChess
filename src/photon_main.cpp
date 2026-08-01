@@ -107,17 +107,18 @@ void goCommand(const uci::arguments_t& args) {
 				increment = std::chrono::milliseconds(std::stoi(args.at(incrementKey)));
 			}
 
-			// time management: 5% of remaining time + 50% of increment, min of 50ms
-			auto softTime = std::max(baseTime / 20, 50ms);
-			auto hardTime = std::max(baseTime / 20 + increment / 2, 50ms);
+			// time management: 5% of remaining time + 50% of increment
+			auto softTime = baseTime > 20ms ? baseTime / 20 : 1ms;
+			auto hardTime = std::max(baseTime / 20 + increment / 2, 20ms);
 			params.maxTime = std::make_pair(softTime, hardTime);
 		}
 	}
+	if (args.find("nodes") != args.end()) {
+		params.maxNodes = std::stoi(args.at("nodes"));
+	}
 
 	// TODO: add support for infinite search
-	// TODO: add support for number of nodes limitation
 	CHECK_F(args.find("infinite") == args.end(), "Infinite search not supported");
-	CHECK_F(args.find("nodes") == args.end(), "Nodes limitation not supported");
 	CHECK_F(args.find("mate") == args.end(), "Mate search not supported");
 
 	auto start = std::chrono::steady_clock::now();

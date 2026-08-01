@@ -77,7 +77,11 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 	// update metrics
 	metrics.nodes++;
 
-	// enforce time limit
+	// enforce search limits
+	if (params.maxNodes && metrics.nodes >= *params.maxNodes) {
+		LOG_F(INFO, "Node limit reached, stopping search");
+		return std::nullopt;
+	}
 	if (params.maxTime && metrics.nodes % HARD_TIME_CHECK_INTERVAL == 0) {
 		auto elapsed = clock::now() - state.startTime;
 		if (elapsed >= params.maxTime->second) {
@@ -192,8 +196,6 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		int d = std::max(depth - 1, 0);
 		std::optional<evaluation_t> candidate;
 		if (i == 0) {
-			// TODO: if candidate->score < alpha && plies == 0, consider skipping the rest of
-			// the moves and re-searching with an expanded window
 			candidate = -pvs<isPV>(board, params, d, plies + 1, -beta, -alpha, false,
 								   allowNullMove, metrics, state);
 		} else {
@@ -269,8 +271,8 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	state.killerTable.reset();
 	state.historyTable.reset();
 
-	CHECK_F(params.maxDepth.has_value() || params.maxTime.has_value(),
-			"Either maxDepth or maxTime must be specified");
+	CHECK_F(params.maxDepth || params.maxTime || params.maxNodes,
+			"At least one of maxDepth, maxTime, or maxNodes must be specified");
 	CHECK_F(!params.maxTime || params.maxTime->first <= params.maxTime->second,
 			"Soft time limit must be less than or equal to hard time limit");
 
@@ -320,7 +322,13 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 		}
 	}
 	metrics.ttableUsage = state.ttable.getUsage();
-	CHECK_F(eval.has_value(), "Search terminated without returning a result");
+	if (!eval) {
+		LOG_F(WARNING,
+			  "Search terminated early without a result, returning arbitrary result.");
+		auto legalMoves = board.moves();
+		CHECK_F(!legalMoves.empty(), "Player to move has no legal moves");
+		eval = evaluation_t{0, {legalMoves.front()}};
+	}
 
 	std::vector<move_t> moves(eval->moves.crbegin(), eval->moves.crend());
 	eval->moves = std::move(moves);

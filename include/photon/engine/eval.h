@@ -21,6 +21,7 @@ struct searchparams_t {
 	std::optional<int> maxDepth;
 	/** (soft, hard) time limits for search */
 	std::optional<std::pair<std::chrono::milliseconds, std::chrono::milliseconds>> maxTime;
+	std::optional<int> maxNodes;
 };
 
 struct evalmetrics_t {
