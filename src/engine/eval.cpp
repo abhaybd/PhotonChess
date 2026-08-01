@@ -67,6 +67,7 @@ std::optional<evaluation_t> operator-(std::optional<evaluation_t>&& a) {
 	return -std::move(*a);
 }
 
+// TODO: move some params to dedicated search stack with struct
 template <bool isPV>
 std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, int depth,
 								int plies, int16_t alpha, int16_t beta, bool justNullMoved,
