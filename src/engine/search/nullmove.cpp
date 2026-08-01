@@ -1,6 +1,6 @@
 #include "nullmove.h"
 
-#include "../zobrist.h"
+#include "../../zobrist.h"
 
 namespace photon::engine {
 

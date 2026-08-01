@@ -84,12 +84,12 @@ add_library(Photon::Engine ALIAS photon_engine)
 target_sources(photon_engine PRIVATE
     src/engine/eval.cpp
     src/engine/heuristic.cpp
-    src/engine/move_ordering.cpp
-    src/engine/transposition_table.cpp
-    src/engine/killer.cpp
-    src/engine/history.cpp
-    src/engine/nullmove.cpp
-    src/engine/aspiration.cpp
+    src/engine/move_ordering/move_ordering.cpp
+    src/engine/move_ordering/killer.cpp
+    src/engine/move_ordering/history.cpp
+    src/engine/search/transposition_table.cpp
+    src/engine/search/nullmove.cpp
+    src/engine/search/aspiration.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)

@@ -1,14 +1,14 @@
 #include "photon/engine/eval.h"
 
-#include "aspiration.h"
-#include "history.h"
-#include "killer.h"
-#include "move_ordering.h"
-#include "nullmove.h"
+#include "move_ordering/history.h"
+#include "move_ordering/killer.h"
+#include "move_ordering/move_ordering.h"
 #include "photon/core.h"
 #include "photon/profile.h"
 #include "photon/util.h"
-#include "transposition_table.h"
+#include "search/aspiration.h"
+#include "search/nullmove.h"
+#include "search/transposition_table.h"
 
 #include <limits>
 #include <loguru.hpp>
