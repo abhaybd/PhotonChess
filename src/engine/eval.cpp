@@ -67,7 +67,8 @@ std::optional<evaluation_t> operator-(std::optional<evaluation_t>&& a) {
 template <bool isPV>
 std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, int depth,
 								int plies, int16_t alpha, int16_t beta, bool justNullMoved,
-								evalmetrics_t& metrics, evalstate_t& state) {
+								bool allowNullMove, evalmetrics_t& metrics,
+								evalstate_t& state) {
 	PHOTON_PROFILE_FUNCTION();
 
 	// update metrics
@@ -148,19 +149,32 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 
 	// do null-move pruning
 	// TODO: add eval >= beta condition?
-	if (!isPV && !justNullMoved && depth >= NMP_REDUCTION && CanNullMove(board)) {
-		auto nmHandle = doNullMoveTemp(board);
+	if (!isPV && allowNullMove && beta - alpha == 1 && !justNullMoved &&
+		depth >= NMP_REDUCTION && CanNullMove(board)) {
 		int d = depth - NMP_REDUCTION;
-		auto candidate =
-			-pvs<false>(board, params, d, plies + 1, -beta, -beta + 1, true, metrics, state);
+		std::optional<evaluation_t> candidate;
+		{
+			auto nmHandle = doNullMoveTemp(board);
+			candidate = -pvs<false>(board, params, d, plies + 1, -beta, -beta + 1, true, true,
+									metrics, state);
+		}
 		if (!candidate) {
 			return std::nullopt;
 		}
+		// if NMP would cause cutoff, verify the result with a reduced null-window search
 		if (candidate->score >= beta) {
-			if (candidate->score >= MATE_SCORE_BOUND) {
-				candidate->score = beta;
+			// disable NMP in verification search
+			auto verified =
+				pvs<false>(board, params, d, plies, alpha, beta, false, false, metrics, state);
+			if (!verified) {
+				return std::nullopt;
 			}
-			return evaluation_t{candidate->score, {}};
+			if (verified->score >= beta) {
+				if (verified->score >= MATE_SCORE_BOUND) {
+					verified->score = beta;
+				}
+				return evaluation_t{verified->score, {}};
+			}
 		}
 	}
 
@@ -175,14 +189,14 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		int d = std::max(depth - 1, 0);
 		std::optional<evaluation_t> candidate;
 		if (i == 0) {
-			candidate =
-				-pvs<isPV>(board, params, d, plies + 1, -beta, -alpha, false, metrics, state);
+			candidate = -pvs<isPV>(board, params, d, plies + 1, -beta, -alpha, false,
+								   allowNullMove, metrics, state);
 		} else {
 			candidate = -pvs<false>(board, params, d, plies + 1, -alpha - 1, -alpha, false,
-									metrics, state);
+									allowNullMove, metrics, state);
 			if (isPV && candidate && candidate->score > alpha) {
 				candidate = -pvs<true>(board, params, d, plies + 1, -beta, -alpha, false,
-									   metrics, state);
+									   allowNullMove, metrics, state);
 			}
 		}
 		if (!candidate) {
@@ -268,7 +282,8 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 		}
 	}
 	for (int d = 1; d <= maxDepth; d++) {
-		auto evalOpt = pvs<true>(boardCopy, params, d, 0, alpha, beta, false, metrics, state);
+		auto evalOpt =
+			pvs<true>(boardCopy, params, d, 0, alpha, beta, false, true, metrics, state);
 		if (!evalOpt) {
 			// we're terminating early (e.g. time limit) so break out
 			break;
