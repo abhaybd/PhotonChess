@@ -31,7 +31,8 @@ std::vector<move_t> GenerateMoves(const board_t& board, player_t player);
  * @param board The chess board.
  * @param moves The vector to store the generated moves.
  */
-void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move_t>& moves);
+void PieceMoves(player_t player, piece_t piece, const board_t& board,
+				std::vector<move_t>& moves);
 
 /**
  * Generates pawn moves for a given set of pawns, including en passant and promotion.

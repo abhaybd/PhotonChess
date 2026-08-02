@@ -27,6 +27,8 @@ std::vector<std::string_view> split(std::string_view s, char delim) {
 }
 
 board_t MakeBoard(const std::vector<std::string_view>& parts) {
+	CHECK_F(parts.size() == 6, "Malformed FEN string: has %zu parts, expected 6",
+			parts.size());
 	std::vector<std::string_view> rowsRev = split(parts[0], '/');
 	board_t board;
 	board.white.fill(0);
@@ -348,7 +350,12 @@ move_t MoveFromUCI(const board_t& board, std::string_view uci) {
 						  ? player_t::white
 						  : player_t::black;
 	CHECK_F(CheckOccupancy(board.occupancyMap(player), m.from));
-	m.isCapture = CheckOccupancy(board.occupancyMap(OtherPlayer(player)), m.to);
+	auto ep = board.availableEnPassant();
+	if (ep && ep == m.to && m.getPiece(board) == piece_t::pawn) {
+		m.isCapture = true;
+	} else {
+		m.isCapture = CheckOccupancy(board.occupancyMap(OtherPlayer(player)), m.to);
+	}
 	return m;
 }
 

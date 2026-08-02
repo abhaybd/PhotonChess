@@ -109,7 +109,8 @@ std::vector<move_t> GenerateMoves(const board_t& board, player_t player) {
 	return moves;
 }
 
-void PieceMoves(player_t player, piece_t piece, board_t& board, std::vector<move_t>& moves) {
+void PieceMoves(player_t player, piece_t piece, const board_t& board,
+				std::vector<move_t>& moves) {
 	bitboard_t playerOccupancy = board.occupancyMap(player);
 	bitboard_t enemyOccupancy = board.occupancyMap(OtherPlayer(player));
 	switch (piece) {

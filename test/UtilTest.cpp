@@ -1,10 +1,66 @@
 #include "photon/util.h"
 
 #include <algorithm>
+
 #include <catch2/catch_test_macros.hpp>
 
 using namespace photon;
 using namespace photon::util;
+
+TEST_CASE("Test UCI Move Parsing", "[util]") {
+	std::string fen = "n3k2r/1P6/4n3/5Pp1/8/8/8/4K2R w Kk g6 0 1";
+	board_t board = MakeBoard(fen);
+
+	SECTION("Quiet move") {
+		move_t move = MoveFromUCI(board, "f5f6");
+		REQUIRE(move.from == ParseSquare("f5"));
+		REQUIRE(move.to == ParseSquare("f6"));
+		REQUIRE(move.promotion == -1);
+		REQUIRE(!move.isCapture);
+	}
+
+	SECTION("Capture move") {
+		move_t move = MoveFromUCI(board, "f5e6");
+		REQUIRE(move.from == ParseSquare("f5"));
+		REQUIRE(move.to == ParseSquare("e6"));
+		REQUIRE(move.promotion == -1);
+		REQUIRE(move.isCapture);
+	}
+
+	SECTION("En passant") {
+		move_t move = MoveFromUCI(board, "f5g6");
+		REQUIRE(move.from == ParseSquare("f5"));
+		REQUIRE(move.to == ParseSquare("g6"));
+		REQUIRE(move.promotion == -1);
+		REQUIRE(move.isCapture);
+		REQUIRE(move.isEnPassant(board));
+	}
+
+	SECTION("Quiet Promotion") {
+		move_t move = MoveFromUCI(board, "b7b8q");
+		REQUIRE(move.from == ParseSquare("b7"));
+		REQUIRE(move.to == ParseSquare("b8"));
+		REQUIRE(move.promotion == static_cast<int8_t>(piece_t::queen));
+		REQUIRE(!move.isCapture);
+	}
+
+	SECTION("Capture Promotion") {
+		move_t move = MoveFromUCI(board, "b7a8q");
+		REQUIRE(move.from == ParseSquare("b7"));
+		REQUIRE(move.to == ParseSquare("a8"));
+		REQUIRE(move.promotion == static_cast<int8_t>(piece_t::queen));
+		REQUIRE(move.isCapture);
+	}
+
+	SECTION("Kingside castle") {
+		move_t move = MoveFromUCI(board, "e1g1");
+		REQUIRE(move.from == ParseSquare("e1"));
+		REQUIRE(move.to == ParseSquare("g1"));
+		REQUIRE(move.promotion == -1);
+		REQUIRE(!move.isCapture);
+		REQUIRE(move.isCastle(board, castle_t::king));
+	}
+}
 
 TEST_CASE("Test Board Hashing", "[util][hash]") {
 	std::string fen = "r3k2r/6p1/8/8/2p2P2/8/1P6/R3K2R w KQkq - 0 1";
