@@ -1,6 +1,6 @@
 # PhotonChess
 
-Photon is a UCI-compliant chess engine written from scratch in C++! It uses negamax search with alpha-beta pruning, tapered piece-square table static evaluation, and the following search optimizations:
+Photon is a UCI-compliant chess engine written from scratch in C++! It uses Principal-Variation Search, tapered piece-square table static evaluation, and the following search optimizations:
 - Iterative Deepening
 - Transposition Table (also for move ordering)
 - Quiescence Search
