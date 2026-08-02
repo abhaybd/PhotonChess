@@ -84,6 +84,7 @@ add_library(Photon::Engine ALIAS photon_engine)
 target_sources(photon_engine PRIVATE
     src/engine/eval.cpp
     src/engine/heuristic.cpp
+    src/engine/move_ordering/exchange.cpp
     src/engine/move_ordering/move_ordering.cpp
     src/engine/move_ordering/killer.cpp
     src/engine/move_ordering/history.cpp
@@ -107,6 +108,7 @@ add_executable(tests
     test/perft.cpp
     test/KillerHeuristicTest.cpp
     test/AspirationWindowTest.cpp
+    test/SEETest.cpp
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain

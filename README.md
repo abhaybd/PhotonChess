@@ -9,6 +9,7 @@ Photon is a UCI-compliant chess engine written from scratch in C++! It uses Prin
 - MVV-LVA capture move ordering
 - Killer Heuristic
 - History Heuristic (with history gravity and malus)
+- Static Exchange Evaluation (for move ordering and quiescence search pruning)
 - Soft/Hard Time Management
 
 ## Environment Variables

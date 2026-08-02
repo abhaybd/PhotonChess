@@ -1,5 +1,7 @@
 #include "move_ordering.h"
 
+#include "exchange.h"
+
 #include <algorithm>
 #include <loguru.hpp>
 
@@ -33,25 +35,35 @@ std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<mov
 									 std::optional<move_t> tt_move, bool qSearch) {
 	std::vector<scoredmove_t> scoredMoves;
 	scoredMoves.reserve(moves.size());
-	// TODO: implement SEE for good/bad capture ordering
+	// sort moves by (high to low) TT move, good captures, killer, quiets, bad captures.
+	// captures are ordered by MVV-LVA, quiets by history score.
 	for (move_t m : moves) {
-		// LSB to MSB: 0-15=history, 16=killer, 17-22=MVV-LVA, 23=TT move
+		// LSB to MSB: 0-15=score, 16=quiet, 17=killer, 18=good capture, 19=TT move
+		// history score can technically be negative so this bit packing isn't strictly
+		// correct, but it is safe.
 		int score = 0;
+		bool isGoodCapture = false;
 		if (m.isCapture) {
 			auto victimOpt = m.getCapturedPiece(board);
 			DCHECK_F(victimOpt.has_value());
-			score += MVV_LVA(m.getPiece(board), *victimOpt) << 17;
-		} else if (std::find(killerMoves.begin(), killerMoves.end(), m) != killerMoves.end()) {
-			score += 1 << 16;
+			score += MVV_LVA(m.getPiece(board), *victimOpt);
+			if (EvaluateExchange(board, m) >= 0) {
+				isGoodCapture = true;
+				score += 1 << 18;
+			}
 		} else {
-			score += historyTable.getHistoryScore(board.playerToMove(), m);
+			score += 1 << 16;
+			if (std::find(killerMoves.begin(), killerMoves.end(), m) != killerMoves.end()) {
+				score += 1 << 17;
+			} else {
+				score += historyTable.getHistoryScore(board.playerToMove(), m);
+			}
 		}
 		if (tt_move && m == *tt_move) {
-			score += 1 << 23;
+			score += 1 << 19;
 		}
-		// if qsearch, only search captures and promotions
-		// TODO: in qsearch, use SEE to filter captures
-		if (!qSearch || m.isCapture || m.isPromotion()) {
+		// if qsearch, only search good captures and promotions
+		if (!qSearch || isGoodCapture || m.isPromotion()) {
 			scoredMoves.push_back({m, score});
 		}
 	}
