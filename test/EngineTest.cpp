@@ -1,6 +1,7 @@
 #include "photon/core.h"
 #include "photon/engine/eval.h"
 #include "photon/util.h"
+#include "string_conversions.h" // IWYU pragma: keep
 
 #include <catch2/catch_test_macros.hpp>
 

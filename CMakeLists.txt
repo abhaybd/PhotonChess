@@ -109,6 +109,7 @@ add_executable(tests
     test/KillerHeuristicTest.cpp
     test/AspirationWindowTest.cpp
     test/SEETest.cpp
+    test/MoveOrderingTest.cpp
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain
