@@ -7,6 +7,7 @@
 #include "photon/profile.h"
 #include "photon/util.h"
 #include "search/aspiration.h"
+#include "search/lmr.h"
 #include "search/nullmove.h"
 #include "search/transposition_table.h"
 
@@ -44,6 +45,9 @@ constexpr int16_t HISTORY_DEPTH_FACTOR = 16;
 constexpr int NMP_REDUCTION = 3;
 constexpr int ASPIRATION_WINDOW_DELTA = 50; // initial window half-size, centipawns
 constexpr int ASPIRATION_MIN_DEPTH = 3;
+constexpr int LMR_MIN_DEPTH = 3;
+constexpr int LMR_MIN_IDX = 2;
+constexpr int LMR_REDUCTION = 1;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
@@ -125,6 +129,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 
 	// TODO: implement endgame tablebases
 	player_t player = board.playerToMove();
+	bool inCheck = board.inCheck(player);
 	std::vector<move_t> plMoves = board.pseudoLegalMoves();
 
 	// handle terminal conditions that don't require legal move generation
@@ -159,7 +164,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 			std::any_of(plMoves.begin(), plMoves.end(),
 						[&board](const move_t& m) { return board.isLegal(m); });
 		if (!hasLegalMoves) {
-			if (board.inCheck(player)) {
+			if (inCheck) {
 				return evaluation_t{MateDistanceToScore(plies), {}};
 			} else {
 				return evaluation_t{0, {}};
@@ -173,7 +178,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		}
 	}
 
-	bool qSearch = depth <= 0 && !board.inCheck(player);
+	bool qSearch = depth <= 0 && !inCheck;
 	evaluation_t best = {-SCORE_INF, {}};
 
 	if (qSearch) {
@@ -240,22 +245,32 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 
 	std::vector<move_t> legalMoves;
 	legalMoves.reserve(scoredMoves.size());
+	lmr_t lmr(LMR_MIN_DEPTH, LMR_MIN_IDX, LMR_REDUCTION);
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
 		if (!board.isLegal(m)) {
 			continue;
 		}
-		bool isFirstLegalMove = legalMoves.empty();
+		size_t numLegalMovesSearched = legalMoves.size();
 		legalMoves.push_back(m);
 		auto handle = board.doMoveTemp(m);
 		int d = std::max(depth - 1, 0);
 		std::optional<evaluation_t> candidate;
-		if (isFirstLegalMove) {
+		if (numLegalMovesSearched == 0) {
 			candidate = -pvs<isPV>(board, params, d, plies + 1, -beta, -alpha, false,
 								   allowNullMove, metrics, state);
 		} else {
-			candidate = -pvs<false>(board, params, d, plies + 1, -alpha - 1, -alpha, false,
-									allowNullMove, metrics, state);
+			int reduction = lmr.getReduction(board, d, numLegalMovesSearched, inCheck, m);
+			candidate = -pvs<false>(board, params, d - reduction, plies + 1, -alpha - 1,
+									-alpha, false, allowNullMove, metrics, state);
+
+			// if reduced-depth scout search fails high, re-scout at full depth
+			if (reduction > 0 && candidate && candidate->score > alpha) {
+				candidate = -pvs<false>(board, params, d, plies + 1, -alpha - 1, -alpha, false,
+										allowNullMove, metrics, state);
+			}
+
+			// if scout search fails high, re-search at full-width
 			if (isPV && candidate && candidate->score > alpha) {
 				candidate = -pvs<true>(board, params, d, plies + 1, -beta, -alpha, false,
 									   allowNullMove, metrics, state);
@@ -290,7 +305,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 	// all terminal conditions other than checkmate and stalemate are handled, check now
 	if (legalMoves.empty()) {
 		if (!qSearch) {
-			if (board.inCheck(player)) {
+			if (inCheck) {
 				return evaluation_t{MateDistanceToScore(plies), {}};
 			} else {
 				return evaluation_t{0, {}};

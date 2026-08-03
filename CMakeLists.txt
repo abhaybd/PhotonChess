@@ -91,6 +91,7 @@ target_sources(photon_engine PRIVATE
     src/engine/search/transposition_table.cpp
     src/engine/search/nullmove.cpp
     src/engine/search/aspiration.cpp
+    src/engine/search/lmr.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
@@ -110,6 +111,7 @@ add_executable(tests
     test/AspirationWindowTest.cpp
     test/SEETest.cpp
     test/MoveOrderingTest.cpp
+    test/LMRTest.cpp
 )
 target_link_libraries(tests PRIVATE
     Catch2::Catch2WithMain
