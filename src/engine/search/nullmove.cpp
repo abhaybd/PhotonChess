@@ -12,7 +12,7 @@ bool CanNullMove(const board_t& board) {
 			board.getBitboard(player, piece_t::bishop) |
 			board.getBitboard(player, piece_t::rook) |
 			board.getBitboard(player, piece_t::queen)) != 0 &&
-		   !board.inCheck(player);
+		   !board.inCheck(player) && board.result() == result_t::none;
 }
 
 temp_nullmove_handle_t doNullMoveTemp(board_t& board) {

@@ -239,6 +239,35 @@ struct board_t {
 	std::vector<move_t> moves() const;
 
 	/**
+	 * @brief Gets a vector of all pseudo-legal moves from the current chessboard state.
+	 *
+	 * Psuedo-legal moves are a superset of legal moves, not filtered for legality,
+	 * e.g. moves that leave you in check are included.
+	 *
+	 * @return A vector of all pseudo-legal moves
+	 */
+	std::vector<move_t> pseudoLegalMoves() const;
+
+	/**
+	 * @brief Checks if a move is legal.
+	 *
+	 * @param move The move to check
+	 * @return True if the move is legal, false otherwise
+	 */
+	bool isLegal(move_t move) const;
+
+	/**
+	 * @brief Checks if a move is legal.
+	 *
+	 * While non-const, this method does not modify the board state.
+	 * It is faster than the const version.
+	 *
+	 * @param move The move to check
+	 * @return True if the move is legal, false otherwise
+	 */
+	bool isLegal(move_t move);
+
+	/**
 	 * @brief Checks if a square is attacked by a player.
 	 * @param player The player
 	 * @param square The square to check

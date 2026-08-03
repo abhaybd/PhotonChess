@@ -10,6 +10,7 @@
 #include "search/nullmove.h"
 #include "search/transposition_table.h"
 
+#include <algorithm>
 #include <limits>
 #include <loguru.hpp>
 
@@ -67,6 +68,37 @@ std::optional<evaluation_t> operator-(std::optional<evaluation_t>&& a) {
 	return -std::move(*a);
 }
 
+bool IsNonStalemateDraw(const board_t& board) {
+	// 50 move rule
+	if (board.halfmoveClock >= 100) {
+		return true;
+	}
+	// threefold repetition
+	size_t movesSinceIrreversible =
+		board.historyHashes.size() - board.lastIrreversibleMove - 1;
+	if (movesSinceIrreversible >= 8) {
+		int count = 0;
+		for (int i = board.historyHashes.size() - 4; i >= board.lastIrreversibleMove + 1;
+			 i -= 2) {
+			if (board.historyHashes[i] == board.hash) {
+				count++;
+				if (count >= 2) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * Get the score for a mate in the given number of plies of the current player.
+ * Note that the score is negative since the current player is getting mated.
+ */
+int16_t MateDistanceToScore(int plies) {
+	return static_cast<int16_t>(-CHECKMATE_SCORE + plies);
+}
+
 // TODO: move some params to dedicated search stack with struct
 template <bool isPV>
 std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, int depth,
@@ -91,20 +123,13 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		}
 	}
 
-	// TODO: is there a way to check for terminal states without generating all moves?
-	std::vector<move_t> moves = board.moves();
-
 	// TODO: implement endgame tablebases
 	player_t player = board.playerToMove();
-	result_t result = board.result(!moves.empty());
+	std::vector<move_t> plMoves = board.pseudoLegalMoves();
 
-	if (result == WinResult(OtherPlayer(player))) {
-		// penalize mated positions by the number of plies to the checkmate
-		return evaluation_t{static_cast<int16_t>(-CHECKMATE_SCORE + plies), {}};
-	} else if (result == result_t::draw) {
+	// handle terminal conditions that don't require legal move generation
+	if (IsNonStalemateDraw(board)) {
 		return evaluation_t{0, {}};
-	} else if (result == WinResult(player)) {
-		ABORT_F("Player to move cannot already have checkmate! result == WinResult(player)");
 	}
 
 	auto tt_entry = state.ttable.get(board, plies);
@@ -130,11 +155,22 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 
 	if (justNullMoved && depth <= 0) {
 		// don't allow going from nullmove to qsearch, so return static eval if needed
-		int16_t score = PositionHeuristic(board);
-		if (player == player_t::black) {
-			score = -score;
+		bool hasLegalMoves =
+			std::any_of(plMoves.begin(), plMoves.end(),
+						[&board](const move_t& m) { return board.isLegal(m); });
+		if (!hasLegalMoves) {
+			if (board.inCheck(player)) {
+				return evaluation_t{MateDistanceToScore(plies), {}};
+			} else {
+				return evaluation_t{0, {}};
+			}
+		} else {
+			int16_t score = PositionHeuristic(board);
+			if (player == player_t::black) {
+				score = -score;
+			}
+			return evaluation_t{score, {}};
 		}
-		return evaluation_t{score, {}};
 	}
 
 	bool qSearch = depth <= 0 && !board.inCheck(player);
@@ -147,7 +183,18 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 			score = -score;
 		}
 		if (score >= beta) {
-			return evaluation_t{score, {}};
+			// make sure we're not in a terminal position
+			result_t result = board.result();
+			if (result == WinResult(OtherPlayer(player))) {
+				return evaluation_t{MateDistanceToScore(plies), {}};
+			} else if (result == result_t::draw) {
+				return evaluation_t{0, {}};
+			} else if (result == result_t::none) {
+				return evaluation_t{score, {}};
+			} else {
+				ABORT_F("Player to move cannot already have checkmate! result == "
+						"WinResult(player)");
+			}
 		}
 		if (score > alpha) {
 			alpha = score;
@@ -189,14 +236,21 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 	auto tt_move = tt_entry ? std::optional(tt_entry->best_move) : std::nullopt;
 	auto killerMoves = state.killerTable.getKillerMoves(plies);
 	std::vector<scoredmove_t> scoredMoves =
-		ScoreMoves(board, moves, killerMoves, state.historyTable, tt_move, qSearch);
+		ScoreMoves(board, plMoves, killerMoves, state.historyTable, tt_move, qSearch);
 
+	std::vector<move_t> legalMoves;
+	legalMoves.reserve(scoredMoves.size());
 	for (size_t i = 0; i < scoredMoves.size(); i++) {
 		move_t m = SelectMove(scoredMoves, i);
+		if (!board.isLegal(m)) {
+			continue;
+		}
+		bool isFirstLegalMove = legalMoves.empty();
+		legalMoves.push_back(m);
 		auto handle = board.doMoveTemp(m);
 		int d = std::max(depth - 1, 0);
 		std::optional<evaluation_t> candidate;
-		if (i == 0) {
+		if (isFirstLegalMove) {
 			candidate = -pvs<isPV>(board, params, d, plies + 1, -beta, -alpha, false,
 								   allowNullMove, metrics, state);
 		} else {
@@ -222,14 +276,31 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 				// apply history bonus to the move that caused the beta cutoff
 				state.historyTable.update(player, m, depth, true);
 				// apply history penalty to the quiet moves that were already searched
-				for (size_t j = 0; j < i; j++) {
-					auto quietMove = scoredMoves[j].move;
+				for (size_t j = 0; j < legalMoves.size() - 1; j++) {
+					auto quietMove = legalMoves[j];
 					if (!quietMove.isCapture) {
 						state.historyTable.update(player, quietMove, depth, false);
 					}
 				}
 			}
 			break;
+		}
+	}
+
+	// all terminal conditions other than checkmate and stalemate are handled, check now
+	if (legalMoves.empty()) {
+		if (!qSearch) {
+			if (board.inCheck(player)) {
+				return evaluation_t{MateDistanceToScore(plies), {}};
+			} else {
+				return evaluation_t{0, {}};
+			}
+		} else {
+			// if we're in qsearch and there are no legal captures, double-check for stalemate
+			// note that checkmates are impossible here since we're not in check
+			if (board.result() == result_t::draw) {
+				return evaluation_t{0, {}};
+			}
 		}
 	}
 

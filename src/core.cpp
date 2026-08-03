@@ -5,6 +5,7 @@
 #include "photon/util.h"
 #include "zobrist.h"
 
+#include <algorithm>
 #include <loguru.hpp>
 #include <sstream>
 #include <strings.h>
@@ -139,7 +140,10 @@ bool board_t::inCheck(player_t player) const {
 }
 
 result_t board_t::result() const {
-	return result(!moves().empty());
+	auto plMoves = pseudoLegalMoves();
+	bool hasLegalMoves = std::any_of(plMoves.begin(), plMoves.end(),
+									 [this](const move_t& m) { return isLegal(m); });
+	return result(hasLegalMoves);
 }
 
 result_t board_t::result(bool hasLegalMoves) const {
@@ -381,21 +385,41 @@ temp_move_handle_t board_t::doMoveTemp(move_t move) {
 std::vector<move_t> board_t::moves() const {
 	PHOTON_PROFILE_FUNCTION();
 
-	player_t player = playerToMove();
-	std::vector<move_t> moves = GenerateMoves(*this, player);
-
-	std::vector<move_t> legalMoves;
-	legalMoves.reserve(moves.size());
+	std::vector<move_t> moves = pseudoLegalMoves();
 	board_t copy = this->cheapCopy();
 
-	for (move_t move : moves) {
-		auto handle = copy.doMoveTemp(move, true);
-		if (!copy.inCheck(player)) {
-			legalMoves.push_back(move);
+	size_t idx = 0;
+	for (size_t i = 0; i < moves.size(); i++) {
+		if (copy.isLegal(moves[i])) {
+			if (idx != i) {
+				moves[idx] = moves[i];
+			}
+			idx++;
 		}
 	}
+	while (idx < moves.size()) {
+		moves.pop_back();
+	}
 
-	return legalMoves;
+	return moves;
+}
+
+std::vector<move_t> board_t::pseudoLegalMoves() const {
+	PHOTON_PROFILE_FUNCTION();
+	return GenerateMoves(*this, playerToMove());
+}
+
+bool board_t::isLegal(move_t move) {
+	auto player = playerToMove();
+	auto handle = doMoveTemp(move, true);
+	return !inCheck(player);
+}
+
+bool board_t::isLegal(move_t move) const {
+	auto copy = cheapCopy();
+	player_t player = copy.playerToMove();
+	copy.doMove(move, true);
+	return !copy.inCheck(player);
 }
 
 bool board_t::isSquareAttacked(player_t player, uint8_t square) const {
