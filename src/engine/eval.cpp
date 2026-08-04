@@ -33,7 +33,9 @@ struct evalstate_t {
 	/** Hash of the root position of the search */
 	uint64_t rootPosHash;
 	clock::time_point startTime;
+	bool ponder;
 	std::atomic_flag stop;
+	std::atomic_flag ponderHit;
 };
 
 namespace {
@@ -53,7 +55,7 @@ constexpr int LMR_REDUCTION = 1;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
-constexpr int HARD_TIME_CHECK_INTERVAL = 10000;
+constexpr int STOP_CHECK_INTERVAL = 1024;
 
 bool operator<(const evaluation_t& a, const evaluation_t& b) {
 	return a.score < b.score;
@@ -117,12 +119,12 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 	metrics.nodes++;
 
 	// enforce search limits
-	if (params.maxNodes && metrics.nodes >= *params.maxNodes) {
+	if (!state.ponder && params.maxNodes && metrics.nodes >= *params.maxNodes) {
 		LOG_F(INFO, "Node limit reached, stopping search");
 		return std::nullopt;
 	}
-	if (metrics.nodes % HARD_TIME_CHECK_INTERVAL == 0) {
-		if (params.maxTime) {
+	if (metrics.nodes % STOP_CHECK_INTERVAL == 0) {
+		if (!state.ponder && params.maxTime) {
 			auto elapsed = clock::now() - state.startTime;
 			if (elapsed >= params.maxTime->second) {
 				LOG_F(INFO, "Hard time limit reached, stopping search");
@@ -133,6 +135,10 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 			LOG_F(INFO, "Stop requested, stopping search");
 			state.stop.clear();
 			return std::nullopt;
+		}
+		if (state.ponder && state.ponderHit.test()) {
+			state.ponder = false;
+			state.startTime = clock::now();
 		}
 	}
 
@@ -358,11 +364,17 @@ evalstate_ptr_t CreateEvalState() {
 						history_table_t(MAX_HISTORY_BONUS, HISTORY_DEPTH_FACTOR),
 						0ULL,
 						clock::now(),
+						false,
+						{},
 						{}});
 }
 
 void StopSearch(evalstate_t& state) {
 	state.stop.test_and_set();
+}
+
+void PonderHit(evalstate_t& state) {
+	state.ponderHit.test_and_set();
 }
 
 std::pair<evaluation_t, evalmetrics_t>
@@ -375,6 +387,8 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	state.killerTable.reset();
 	state.historyTable.reset();
 	state.stop.clear();
+	state.ponderHit.clear();
+	state.ponder = params.ponder;
 
 	CHECK_F(!params.maxTime || params.maxTime->first <= params.maxTime->second,
 			"Soft time limit must be less than or equal to hard time limit");
@@ -382,7 +396,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	std::optional<evaluation_t> eval;
 	int maxDepth = MAX_PLIES;
 	if (params.maxDepth.has_value()) {
-		if (*params.maxDepth < MAX_PLIES) {
+		if (*params.maxDepth <= MAX_PLIES) {
 			maxDepth = *params.maxDepth;
 		} else {
 			LOG_F(WARNING, "Requested max depth %d is greater than maximum allowable (%d)",
@@ -392,7 +406,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 
 	aspiration_window_t aspiration(ASPIRATION_WINDOW_DELTA, ASPIRATION_MIN_DEPTH, SCORE_INF,
 								   MATE_SCORE_BOUND);
-	for (int d = 1; d <= maxDepth; d++) {
+	for (int d = 1; d <= maxDepth || (state.ponder && d <= MAX_PLIES); d++) {
 		std::optional<evaluation_t> evalOpt;
 		bool reSearch = false;
 		do {
@@ -427,7 +441,7 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 			params.onResult(result, metrics);
 		}
 
-		if (params.maxTime) {
+		if (!state.ponder && params.maxTime) {
 			auto elapsed = clock::now() - state.startTime;
 			if (elapsed >= params.maxTime->first) {
 				break;

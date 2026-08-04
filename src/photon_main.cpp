@@ -3,6 +3,7 @@
 #include "photon/profile.h"
 #include "photon/util.h"
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <iostream>
@@ -10,6 +11,7 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <thread>
 
 #include <uci/Listener.h>
 #include <uci/events.h>
@@ -22,12 +24,16 @@ constexpr int PRINT_PV_MIN_DEPTH = 4;
 const std::string VERSION = "0.1.0";
 std::unique_ptr<board_t> board;
 engine::evalstate_ptr_t eval_state;
+/** Protects board and eval_state. */
 std::mutex searchMutex;
 
+/** Protects goArgs, quitting, and goArgsCV. */
 std::mutex argsMutex;
 std::optional<uci::arguments_t> goArgs;
 std::condition_variable goArgsCV;
 bool quitting = false;
+
+std::atomic_flag stopPondering;
 
 std::string argsToStr(const uci::arguments_t& args) {
 	std::stringstream ss;
@@ -43,6 +49,7 @@ void uciCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: uci");
 	std::cout << "id name Photon " << VERSION << std::endl;
 	std::cout << "id author Abhay Deshpande" << std::endl;
+	std::cout << "option name Ponder type check default true" << std::endl;
 	std::cout << "uciok" << std::endl;
 }
 
@@ -133,12 +140,14 @@ void printPV(std::chrono::steady_clock::time_point start, const engine::evaluati
 
 void goCommand(const uci::arguments_t& args) {
 	PHOTON_PROFILE_FUNCTION();
-	std::lock_guard lock(searchMutex);
 
 	LOG_SCOPE_F(INFO, "Received command: go");
 	LOG_F(INFO, "Args: %s", argsToStr(args).c_str());
 
+	stopPondering.clear();
+
 	engine::searchparams_t params;
+	params.ponder = args.contains("ponder");
 	if (args.find("depth") != args.end()) {
 		params.maxDepth = std::stoi(args.at("depth"));
 	}
@@ -171,7 +180,8 @@ void goCommand(const uci::arguments_t& args) {
 		params.maxNodes = std::stoi(args.at("nodes"));
 	}
 	bool isInfinite = args.contains("infinite");
-	CHECK_F(isInfinite != (params.maxDepth || params.maxTime || params.maxNodes),
+	CHECK_F(params.ponder ||
+				(isInfinite != (params.maxDepth || params.maxTime || params.maxNodes)),
 			"Infinite search must be specified with no other search limits");
 
 	CHECK_F(args.find("mate") == args.end(), "Mate search not supported");
@@ -186,8 +196,19 @@ void goCommand(const uci::arguments_t& args) {
 	std::chrono::duration<double> elapsed = end - start;
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
 
+	// if pondering, we can't emit bestmove until we get ponderhit or stop
+	if (params.ponder) {
+		while (!stopPondering.test()) {
+			std::this_thread::sleep_for(1ms);
+		}
+	}
+
 	CHECK_F(result.moves.size() > 0, "No moves found!");
-	std::cout << "bestmove " << util::MoveToUCI(result.moves[0]) << std::endl;
+	std::cout << "bestmove " << util::MoveToUCI(result.moves[0]);
+	if (result.moves.size() > 1) {
+		std::cout << " ponder " << util::MoveToUCI(result.moves[1]);
+	}
+	std::cout << std::endl;
 }
 
 void goCommandAsync(const uci::arguments_t& args) {
@@ -198,16 +219,21 @@ void goCommandAsync(const uci::arguments_t& args) {
 
 void goCommandLoop() {
 	while (true) {
-		std::unique_lock lock(argsMutex);
-		goArgsCV.wait(lock, [&]() { return goArgs.has_value() || quitting; });
-		if (quitting) {
-			break;
+		uci::arguments_t args;
+		{
+			std::unique_lock lock(argsMutex);
+			goArgsCV.wait(lock, [&]() { return goArgs.has_value() || quitting; });
+			if (quitting) {
+				break;
+			}
+			args = *goArgs;
+			goArgs.reset();
 		}
-		uci::arguments_t args = *goArgs;
-		goArgs.reset();
-		lock.unlock();
 
-		goCommand(args);
+		{
+			std::lock_guard lock(searchMutex);
+			goCommand(args);
+		}
 	}
 }
 
@@ -216,15 +242,25 @@ void isReadyCommand(const uci::arguments_t&) {
 	std::cout << "readyok" << std::endl;
 }
 
+void ponderHitCommand(const uci::arguments_t&) {
+	LOG_F(INFO, "Received command: ponderhit");
+	if (eval_state) {
+		stopPondering.test_and_set();
+		engine::PonderHit(*eval_state);
+	}
+}
+
 void stopCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: stop");
 	if (eval_state) {
+		stopPondering.test_and_set();
 		engine::StopSearch(*eval_state);
 	}
 }
 
 void quit() {
 	if (eval_state) {
+		stopPondering.test_and_set();
 		engine::StopSearch(*eval_state);
 	}
 
@@ -265,8 +301,10 @@ int main(int argc, char** argv) {
 	listener.addListener(uci::event::UCINEWGAME, newGameCommand);
 	listener.addListener(uci::event::ISREADY, isReadyCommand);
 	listener.addListener(uci::event::GO, goCommandAsync);
+	listener.addListener(uci::event::PONDERHIT, ponderHitCommand);
 	listener.addListener(uci::event::STOP, stopCommand);
 	listener.addListener(uci::event::QUIT, [&](const uci::arguments_t&) {
+		LOG_F(INFO, "Received command: quit");
 		listener.stopListening();
 		quit();
 	});

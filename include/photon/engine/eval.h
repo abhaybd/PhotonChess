@@ -25,6 +25,7 @@ struct evalmetrics_t {
 };
 
 struct searchparams_t {
+	bool ponder = false;
 	std::optional<int> maxDepth;
 	/** (soft, hard) time limits for search */
 	std::optional<std::pair<std::chrono::milliseconds, std::chrono::milliseconds>> maxTime;
@@ -43,6 +44,8 @@ evalstate_ptr_t CreateEvalState();
 int16_t PositionHeuristic(const board_t& board);
 
 void StopSearch(evalstate_t& state);
+
+void PonderHit(evalstate_t& state);
 
 std::pair<evaluation_t, evalmetrics_t> EvalBoard(const board_t& board,
 												 const searchparams_t& params);
