@@ -19,7 +19,7 @@
 using namespace photon;
 using namespace std::chrono_literals;
 
-constexpr int PRINT_PV_MIN_DEPTH = 4;
+constexpr int PRINT_PV_MIN_DEPTH = 7;
 
 const std::string VERSION = "0.1.0";
 
@@ -201,6 +201,9 @@ void goCommand(const uci::arguments_t& args) {
 	auto end = std::chrono::steady_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
+
+	// print final info (duplication with in-search printing is fine)
+	printPV(start, result, metrics);
 
 	// if pondering/infinite, we can't emit bestmove until signaled by gui
 	if (params.ponder || isInfinite) {

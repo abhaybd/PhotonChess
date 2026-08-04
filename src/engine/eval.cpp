@@ -56,6 +56,7 @@ constexpr int LMR_REDUCTION = 1;
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
 constexpr int STOP_CHECK_INTERVAL = 1024;
+constexpr int TIMEOUT_CHECK_INTERVAL = 10000;
 
 bool operator<(const evaluation_t& a, const evaluation_t& b) {
 	return a.score < b.score;
@@ -123,7 +124,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		LOG_F(INFO, "Node limit reached, stopping search");
 		return std::nullopt;
 	}
-	if (metrics.nodes % STOP_CHECK_INTERVAL == 0) {
+	if (metrics.nodes % TIMEOUT_CHECK_INTERVAL == 0) {
 		if (!state.ponder && params.maxTime) {
 			auto elapsed = clock::now() - state.startTime;
 			if (elapsed >= params.maxTime->second) {
@@ -131,6 +132,8 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 				return std::nullopt;
 			}
 		}
+	}
+	if (metrics.nodes % STOP_CHECK_INTERVAL == 0) {
 		if (state.stop.test()) {
 			LOG_F(INFO, "Stop requested, stopping search");
 			state.stop.clear();
