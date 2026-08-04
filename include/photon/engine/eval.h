@@ -3,6 +3,7 @@
 #include "photon/core.h"
 
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -17,17 +18,18 @@ struct evaluation_t {
 	std::vector<move_t> moves;
 };
 
+struct evalmetrics_t {
+	int nodes = 0;
+	int depth = 0;
+	int ttableUsage = 0;
+};
+
 struct searchparams_t {
 	std::optional<int> maxDepth;
 	/** (soft, hard) time limits for search */
 	std::optional<std::pair<std::chrono::milliseconds, std::chrono::milliseconds>> maxTime;
 	std::optional<int> maxNodes;
-};
-
-struct evalmetrics_t {
-	int nodes = 0;
-	int depth = 0;
-	int ttableUsage = 0;
+	std::function<void(const evaluation_t&, const evalmetrics_t&)> onResult;
 };
 
 struct evalstate_t;

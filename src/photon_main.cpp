@@ -3,6 +3,7 @@
 #include "photon/profile.h"
 #include "photon/util.h"
 
+#include <chrono>
 #include <condition_variable>
 #include <iostream>
 #include <loguru.hpp>
@@ -15,6 +16,8 @@
 
 using namespace photon;
 using namespace std::chrono_literals;
+
+constexpr int PRINT_PV_MIN_DEPTH = 4;
 
 const std::string VERSION = "0.1.0";
 std::unique_ptr<board_t> board;
@@ -89,6 +92,44 @@ void positionCommand(const uci::arguments_t& args) {
 	}
 }
 
+void printPV(std::chrono::steady_clock::time_point start, const engine::evaluation_t& result,
+			 const engine::evalmetrics_t& metrics) {
+	if (metrics.depth < PRINT_PV_MIN_DEPTH) {
+		return;
+	}
+
+	std::chrono::duration<double> elapsed = decltype(start)::clock::now() - start;
+	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+
+	std::stringstream ss;
+	ss << "info";
+	ss << " depth " << metrics.depth;
+	ss << " nodes " << metrics.nodes;
+	ss << " nps " << static_cast<int>(metrics.nodes / elapsed.count());
+	ss << " time " << elapsedMillis.count();
+	ss << " hashfull " << metrics.ttableUsage;
+
+	ss << " score ";
+	// report mate in fullmoves or score
+	auto mateDist = engine::ScoreToMateDistance(result.score);
+	if (mateDist.has_value()) {
+		if (result.score > 0) {
+			ss << "mate " << (*mateDist + 1) / 2;
+		} else {
+			ss << "mate -" << (*mateDist + 1) / 2;
+		}
+	} else {
+		ss << "cp " << result.score;
+	}
+
+	ss << " pv";
+	for (move_t move : result.moves) {
+		ss << " " << util::MoveToUCI(move);
+	}
+	LOG_F(INFO, "Sending info: %s", ss.str().c_str());
+	std::cout << ss.str() << std::endl;
+}
+
 void goCommand(const uci::arguments_t& args) {
 	PHOTON_PROFILE_FUNCTION();
 
@@ -133,39 +174,15 @@ void goCommand(const uci::arguments_t& args) {
 	CHECK_F(args.find("mate") == args.end(), "Mate search not supported");
 
 	auto start = std::chrono::steady_clock::now();
+	params.onResult = [start](const engine::evaluation_t& result,
+							  const engine::evalmetrics_t& metrics) {
+		printPV(start, result, metrics);
+	};
 	auto [result, metrics] = engine::EvalBoard(*board, params, *eval_state);
 	auto end = std::chrono::steady_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
-	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
 
-	std::stringstream ss;
-	ss << "info multipv 1";
-	ss << " depth " << metrics.depth;
-	ss << " nodes " << metrics.nodes << " nps "
-	   << static_cast<int>(metrics.nodes / elapsed.count());
-	ss << " time " << elapsedMillis.count();
-	ss << " hashfull " << metrics.ttableUsage;
-
-	ss << " score ";
-	// report mate in fullmoves or score
-	auto mateDist = engine::ScoreToMateDistance(result.score);
-	if (mateDist.has_value()) {
-		if (result.score > 0) {
-			ss << "mate " << (*mateDist + 1) / 2;
-		} else {
-			ss << "mate -" << (*mateDist + 1) / 2;
-		}
-	} else {
-		ss << "cp " << result.score;
-	}
-
-	ss << " pv";
-	for (move_t move : result.moves) {
-		ss << " " << util::MoveToUCI(move);
-	}
-	LOG_F(INFO, "Sending info: %s", ss.str().c_str());
-	std::cout << ss.str() << std::endl;
 	CHECK_F(result.moves.size() > 0, "No moves found!");
 	std::cout << "bestmove " << util::MoveToUCI(result.moves[0]) << std::endl;
 }

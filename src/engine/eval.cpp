@@ -399,8 +399,18 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 		}
 		eval = std::move(evalOpt);
 		metrics.depth = d;
+		metrics.ttableUsage = state.ttable.getUsage();
 		LOG_F(INFO, "Searched at depth %d with score %d, nodes=%d", d, eval->score,
 			  metrics.nodes);
+
+		if (params.onResult) {
+			// reverse PV for passing to callback
+			evaluation_t result = *eval;
+			std::vector<move_t> moves(result.moves.crbegin(), result.moves.crend());
+			result.moves = std::move(moves);
+			params.onResult(result, metrics);
+		}
+
 		if (params.maxTime) {
 			auto elapsed = clock::now() - state.startTime;
 			if (elapsed >= params.maxTime->first) {
@@ -408,7 +418,6 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 			}
 		}
 	}
-	metrics.ttableUsage = state.ttable.getUsage();
 	if (!eval) {
 		LOG_F(WARNING,
 			  "Search terminated early without a result, returning arbitrary result.");
