@@ -3,9 +3,11 @@
 #include "photon/profile.h"
 #include "photon/util.h"
 
+#include <condition_variable>
 #include <iostream>
 #include <loguru.hpp>
 #include <memory>
+#include <mutex>
 #include <sstream>
 
 #include <uci/Listener.h>
@@ -17,6 +19,11 @@ using namespace std::chrono_literals;
 const std::string VERSION = "0.1.0";
 std::unique_ptr<board_t> board;
 engine::evalstate_ptr_t eval_state;
+
+std::mutex mutex;
+std::optional<uci::arguments_t> goArgs;
+std::condition_variable goArgsCV;
+bool quitting = false;
 
 std::string argsToStr(const uci::arguments_t& args) {
 	std::stringstream ss;
@@ -30,6 +37,7 @@ std::string argsToStr(const uci::arguments_t& args) {
 
 void uciCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: uci");
+	std::lock_guard lock(mutex);
 	std::cout << "id name Photon " << VERSION << std::endl;
 	std::cout << "id author Abhay Deshpande" << std::endl;
 	std::cout << "uciok" << std::endl;
@@ -37,6 +45,7 @@ void uciCommand(const uci::arguments_t&) {
 
 void newGameCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: ucinewgame");
+	std::lock_guard lock(mutex);
 	board.reset();
 	eval_state = engine::CreateEvalState();
 }
@@ -44,6 +53,8 @@ void newGameCommand(const uci::arguments_t&) {
 void positionCommand(const uci::arguments_t& args) {
 	// TODO: avoid resetting if board is already in the same position, and just apply moves
 	LOG_SCOPE_F(INFO, "Received command: position");
+	std::lock_guard lock(mutex);
+
 	board.reset();
 	// don't reset eval_state if it exists so we can reuse the transposition table if possible
 	if (!eval_state) {
@@ -159,8 +170,28 @@ void goCommand(const uci::arguments_t& args) {
 	std::cout << "bestmove " << util::MoveToUCI(result.moves[0]) << std::endl;
 }
 
+void goCommandAsync(const uci::arguments_t& args) {
+	std::lock_guard lock(mutex);
+	goArgs = args;
+	goArgsCV.notify_one();
+}
+
+void goCommandLoop() {
+	while (true) {
+		std::unique_lock lock(mutex);
+		goArgsCV.wait(lock, [&]() { return goArgs.has_value() || quitting; });
+		if (quitting) {
+			break;
+		}
+
+		goCommand(*goArgs);
+		goArgs.reset();
+	}
+}
+
 void isReadyCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: isready");
+	std::lock_guard lock(mutex);
 	std::cout << "readyok" << std::endl;
 }
 
@@ -195,11 +226,17 @@ int main(int argc, char** argv) {
 	listener.addListener(uci::event::POSITION, positionCommand);
 	listener.addListener(uci::event::UCINEWGAME, newGameCommand);
 	listener.addListener(uci::event::ISREADY, isReadyCommand);
-	listener.addListener(uci::event::GO, goCommand);
-	listener.addListener(uci::event::QUIT,
-						 [&](const uci::arguments_t&) { listener.stopListening(); });
+	listener.addListener(uci::event::GO, goCommandAsync);
+	listener.addListener(uci::event::QUIT, [&](const uci::arguments_t&) {
+		listener.stopListening();
+		std::lock_guard lock(mutex);
+		quitting = true;
+		goArgsCV.notify_all();
+	});
 
+	std::thread goCommandThread(goCommandLoop);
 	listener.setupListener();
+	goCommandThread.join();
 
 	return 0;
 }
