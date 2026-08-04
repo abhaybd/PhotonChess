@@ -33,7 +33,7 @@ std::optional<uci::arguments_t> goArgs;
 std::condition_variable goArgsCV;
 bool quitting = false;
 
-std::atomic_flag stopPondering;
+std::atomic_flag stopSearch;
 
 std::string argsToStr(const uci::arguments_t& args) {
 	std::stringstream ss;
@@ -144,7 +144,7 @@ void goCommand(const uci::arguments_t& args) {
 	LOG_SCOPE_F(INFO, "Received command: go");
 	LOG_F(INFO, "Args: %s", argsToStr(args).c_str());
 
-	stopPondering.clear();
+	stopSearch.clear();
 
 	engine::searchparams_t params;
 	params.ponder = args.contains("ponder");
@@ -196,9 +196,9 @@ void goCommand(const uci::arguments_t& args) {
 	std::chrono::duration<double> elapsed = end - start;
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
 
-	// if pondering, we can't emit bestmove until we get ponderhit or stop
-	if (params.ponder) {
-		while (!stopPondering.test()) {
+	// if pondering/infinite, we can't emit bestmove until signaled by gui
+	if (params.ponder || isInfinite) {
+		while (!stopSearch.test()) {
 			std::this_thread::sleep_for(1ms);
 		}
 	}
@@ -245,7 +245,7 @@ void isReadyCommand(const uci::arguments_t&) {
 void ponderHitCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: ponderhit");
 	if (eval_state) {
-		stopPondering.test_and_set();
+		stopSearch.test_and_set();
 		engine::PonderHit(*eval_state);
 	}
 }
@@ -253,14 +253,14 @@ void ponderHitCommand(const uci::arguments_t&) {
 void stopCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: stop");
 	if (eval_state) {
-		stopPondering.test_and_set();
+		stopSearch.test_and_set();
 		engine::StopSearch(*eval_state);
 	}
 }
 
 void quit() {
 	if (eval_state) {
-		stopPondering.test_and_set();
+		stopSearch.test_and_set();
 		engine::StopSearch(*eval_state);
 	}
 
