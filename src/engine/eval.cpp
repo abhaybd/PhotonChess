@@ -12,6 +12,7 @@
 #include "search/transposition_table.h"
 
 #include <algorithm>
+#include <atomic>
 #include <limits>
 #include <loguru.hpp>
 
@@ -32,6 +33,7 @@ struct evalstate_t {
 	/** Hash of the root position of the search */
 	uint64_t rootPosHash;
 	clock::time_point startTime;
+	std::atomic_flag stop;
 };
 
 namespace {
@@ -119,10 +121,17 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		LOG_F(INFO, "Node limit reached, stopping search");
 		return std::nullopt;
 	}
-	if (params.maxTime && metrics.nodes % HARD_TIME_CHECK_INTERVAL == 0) {
-		auto elapsed = clock::now() - state.startTime;
-		if (elapsed >= params.maxTime->second) {
-			LOG_F(INFO, "Hard time limit reached, stopping search");
+	if (metrics.nodes % HARD_TIME_CHECK_INTERVAL == 0) {
+		if (params.maxTime) {
+			auto elapsed = clock::now() - state.startTime;
+			if (elapsed >= params.maxTime->second) {
+				LOG_F(INFO, "Hard time limit reached, stopping search");
+				return std::nullopt;
+			}
+		}
+		if (state.stop.test()) {
+			LOG_F(INFO, "Stop requested, stopping search");
+			state.stop.clear();
 			return std::nullopt;
 		}
 	}
@@ -343,9 +352,17 @@ void evalstate_deleter_t::operator()(evalstate_t* state) const {
 }
 
 evalstate_ptr_t CreateEvalState() {
-	return evalstate_ptr_t(new evalstate_t{
-		transposition_table_t(TTABLE_SIZE), killer_table_t(KILLER_TABLE_SIZE),
-		history_table_t(MAX_HISTORY_BONUS, HISTORY_DEPTH_FACTOR), 0ULL, clock::now()});
+	return evalstate_ptr_t(
+		new evalstate_t{transposition_table_t(TTABLE_SIZE),
+						killer_table_t(KILLER_TABLE_SIZE),
+						history_table_t(MAX_HISTORY_BONUS, HISTORY_DEPTH_FACTOR),
+						0ULL,
+						clock::now(),
+						{}});
+}
+
+void StopSearch(evalstate_t& state) {
+	state.stop.test_and_set();
 }
 
 std::pair<evaluation_t, evalmetrics_t>
@@ -357,9 +374,8 @@ EvalBoard(const board_t& board, const searchparams_t& params, evalstate_t& state
 	state.rootPosHash = board.hash;
 	state.killerTable.reset();
 	state.historyTable.reset();
+	state.stop.clear();
 
-	CHECK_F(params.maxDepth || params.maxTime || params.maxNodes,
-			"At least one of maxDepth, maxTime, or maxNodes must be specified");
 	CHECK_F(!params.maxTime || params.maxTime->first <= params.maxTime->second,
 			"Soft time limit must be less than or equal to hard time limit");
 
