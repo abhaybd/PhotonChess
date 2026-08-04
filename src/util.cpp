@@ -169,6 +169,12 @@ uint8_t ParseSquare(std::string_view s) {
 	return row * 8 + col;
 }
 
+player_t SquareColor(uint8_t square) {
+	int r = square / 8;
+	int c = square % 8;
+	return (r + c) % 2 == 0 ? player_t::black : player_t::white;
+}
+
 std::string SquareToString(uint8_t square) {
 	int row = square / 8;
 	int col = square % 8;

@@ -54,6 +54,13 @@ result_t WinResult(player_t player);
 uint8_t ParseSquare(std::string_view s);
 
 /**
+ * @brief Returns the color of a square.
+ * @param square The square to get the color of.
+ * @return The color of the square.
+ */
+player_t SquareColor(uint8_t square);
+
+/**
  * @brief Converts a square to its string representation.
  * @param square The square to convert.
  * @return The string representation of the square.

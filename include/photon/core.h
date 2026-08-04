@@ -148,6 +148,13 @@ struct board_t {
 	bool inCheck(player_t player) const;
 
 	/**
+	 * @brief Checks if the game is drawn by any condition other than stalemate.
+	 * Stalemate is more expensive to check, so this can be useful.
+	 * @return true iff the game is drawn by any condition other than stalemate
+	 */
+	bool isNonStalemateDraw() const;
+
+	/**
 	 * @brief Gets the result of the game.
 	 * @return The result of the game
 	 */

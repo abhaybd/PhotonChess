@@ -13,6 +13,46 @@
 using namespace photon::util;
 
 namespace photon {
+namespace {
+
+bool InsufficientMaterial(const board_t& board) {
+	for (player_t player : {player_t::white, player_t::black}) {
+		for (piece_t piece : {piece_t::pawn, piece_t::rook, piece_t::queen}) {
+			if (board.getBitboard(player, piece) != 0) {
+				return false;
+			}
+		}
+	}
+
+	// number of white/black bishops/knights
+	uint wb = std::popcount(board.getBitboard(player_t::white, piece_t::bishop));
+	uint bb = std::popcount(board.getBitboard(player_t::black, piece_t::bishop));
+	uint wn = std::popcount(board.getBitboard(player_t::white, piece_t::knight));
+	uint bn = std::popcount(board.getBitboard(player_t::black, piece_t::knight));
+
+	if (wb == 0 && bb == 0 && wn == 0 && bn == 0) {
+		// only kings
+		return true;
+	} else if (wb + bb == 1 && wn + bn == 0) {
+		// king and bishop vs king
+		return true;
+	} else if (wn + bn == 1 && wb + bb == 0) {
+		// king and knight vs king
+		return true;
+	} else if (wb == 1 && bb == 1 && wn + bn == 0) {
+		// king and bishop vs king and bishop (bishops on same color)
+		auto wBColor =
+			util::SquareColor(ffsll(board.getBitboard(player_t::white, piece_t::bishop)) - 1);
+		auto bBColor =
+			util::SquareColor(ffsll(board.getBitboard(player_t::black, piece_t::bishop)) - 1);
+		if (wBColor == bBColor) {
+			return true;
+		}
+	}
+	return false;
+}
+
+} // namespace
 
 board_t::board_t()
 	: metadata(0), enPassant(-1), halfmoveClock(0), fullmove(1), hash(0),
@@ -139,6 +179,34 @@ bool board_t::inCheck(player_t player) const {
 	return isSquareAttacked(OtherPlayer(player), getKing(player));
 }
 
+bool board_t::isNonStalemateDraw() const {
+	// 50 move rule
+	if (halfmoveClock >= 100) {
+		return true;
+	}
+
+	// threefold repetition
+	size_t movesSinceIrreversible = historyHashes.size() - lastIrreversibleMove - 1;
+	if (movesSinceIrreversible >= 8) {
+		int count = 0;
+		for (int i = historyHashes.size() - 4; i >= lastIrreversibleMove + 1; i -= 2) {
+			if (historyHashes[i] == hash) {
+				count++;
+				if (count >= 2) {
+					return true;
+				}
+			}
+		}
+	}
+
+	// insufficient material
+	if (InsufficientMaterial(*this)) {
+		return true;
+	}
+
+	return false;
+}
+
 result_t board_t::result() const {
 	auto plMoves = pseudoLegalMoves();
 	bool hasLegalMoves = std::any_of(plMoves.begin(), plMoves.end(),
@@ -149,25 +217,12 @@ result_t board_t::result() const {
 result_t board_t::result(bool hasLegalMoves) const {
 	PHOTON_PROFILE_FUNCTION();
 
-	player_t player = playerToMove();
-	// 50 move rule
-	if (halfmoveClock >= 100) {
+	if (isNonStalemateDraw()) {
 		return result_t::draw;
 	}
-	// threefold repetition
-	size_t movesSinceIrreversible = historyHashes.size() - lastIrreversibleMove - 1;
-	if (movesSinceIrreversible >= 8) {
-		int count = 0;
-		for (int i = historyHashes.size() - 4; i >= lastIrreversibleMove + 1; i -= 2) {
-			if (historyHashes[i] == hash) {
-				count++;
-				if (count >= 2) {
-					return result_t::draw;
-				}
-			}
-		}
-	}
+
 	// stalemate or checkmate
+	player_t player = playerToMove();
 	if (!hasLegalMoves) {
 		return inCheck(player) ? WinResult(OtherPlayer(player)) : result_t::draw;
 	}

@@ -77,29 +77,6 @@ std::optional<evaluation_t> operator-(std::optional<evaluation_t>&& a) {
 	return -std::move(*a);
 }
 
-bool IsNonStalemateDraw(const board_t& board) {
-	// 50 move rule
-	if (board.halfmoveClock >= 100) {
-		return true;
-	}
-	// threefold repetition
-	size_t movesSinceIrreversible =
-		board.historyHashes.size() - board.lastIrreversibleMove - 1;
-	if (movesSinceIrreversible >= 8) {
-		int count = 0;
-		for (int i = board.historyHashes.size() - 4; i >= board.lastIrreversibleMove + 1;
-			 i -= 2) {
-			if (board.historyHashes[i] == board.hash) {
-				count++;
-				if (count >= 2) {
-					return true;
-				}
-			}
-		}
-	}
-	return false;
-}
-
 /**
  * Get the score for a mate in the given number of plies of the current player.
  * Note that the score is negative since the current player is getting mated.
@@ -151,7 +128,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 	std::vector<move_t> plMoves = board.pseudoLegalMoves();
 
 	// handle terminal conditions that don't require legal move generation
-	if (IsNonStalemateDraw(board)) {
+	if (board.isNonStalemateDraw()) {
 		return evaluation_t{0, {}};
 	}
 
