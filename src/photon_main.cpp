@@ -27,7 +27,7 @@ const std::string VERSION = "0.1.0";
 std::mutex coutMutex;
 
 std::unique_ptr<board_t> board;
-engine::evalstate_ptr_t eval_state;
+engine::evalstate_ptr_t evalState;
 /** Protects board and eval_state. */
 std::mutex searchMutex;
 
@@ -63,7 +63,7 @@ void newGameCommand(const uci::arguments_t&) {
 	std::lock_guard searchLock(searchMutex);
 	std::lock_guard argsLock(argsMutex);
 	board.reset();
-	eval_state = engine::CreateEvalState();
+	evalState = engine::CreateEvalState();
 }
 
 void positionCommand(const uci::arguments_t& args) {
@@ -73,8 +73,8 @@ void positionCommand(const uci::arguments_t& args) {
 
 	board.reset();
 	// don't reset eval_state if it exists so we can reuse the transposition table if possible
-	if (!eval_state) {
-		eval_state = engine::CreateEvalState();
+	if (!evalState) {
+		evalState = engine::CreateEvalState();
 	}
 
 	if (auto fenIt = args.find("fen"); fenIt != args.end()) {
@@ -197,7 +197,7 @@ void goCommand(const uci::arguments_t& args) {
 							  const engine::evalmetrics_t& metrics) {
 		printPV(start, result, metrics);
 	};
-	auto [result, metrics] = engine::EvalBoard(*board, params, *eval_state);
+	auto [result, metrics] = engine::EvalBoard(*board, params, *evalState);
 	auto end = std::chrono::steady_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
@@ -252,24 +252,24 @@ void isReadyCommand(const uci::arguments_t&) {
 
 void ponderHitCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: ponderhit");
-	if (eval_state) {
+	if (evalState) {
 		stopSearch.test_and_set();
-		engine::PonderHit(*eval_state);
+		engine::PonderHit(*evalState);
 	}
 }
 
 void stopCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: stop");
-	if (eval_state) {
+	if (evalState) {
 		stopSearch.test_and_set();
-		engine::StopSearch(*eval_state);
+		engine::StopSearch(*evalState);
 	}
 }
 
 void quit() {
-	if (eval_state) {
+	if (evalState) {
 		stopSearch.test_and_set();
-		engine::StopSearch(*eval_state);
+		engine::StopSearch(*evalState);
 	}
 
 	std::lock_guard lock(argsMutex);
