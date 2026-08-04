@@ -353,3 +353,35 @@ TEST_CASE("Test stalemate", "[core]") {
 		REQUIRE(board.result() == result_t::none);
 	}
 }
+
+TEST_CASE("Test insufficient material", "[core]") {
+	SECTION("King vs King") {
+		std::string fen = "7k/8/8/8/8/8/8/7K w - - 0 1";
+		board_t board = MakeBoard(fen);
+		REQUIRE(board.result() == result_t::draw);
+	}
+
+	SECTION("King and Bishop vs King") {
+		std::string fen = "7k/8/8/8/8/8/8/KB6 w - - 0 1";
+		board_t board = MakeBoard(fen);
+		REQUIRE(board.result() == result_t::draw);
+	}
+
+	SECTION("King and Knight vs King") {
+		std::string fen = "6nk/8/8/8/8/8/8/K7 w - - 0 1";
+		board_t board = MakeBoard(fen);
+		REQUIRE(board.result() == result_t::draw);
+	}
+
+	SECTION("King and Bishop vs King and Bishop (same color)") {
+		std::string fen = "bk6/8/8/8/8/8/8/6KB w - - 0 1";
+		board_t board = MakeBoard(fen);
+		REQUIRE(board.result() == result_t::draw);
+	}
+
+	SECTION("King and Bishop vs King and Bishop (different color)") {
+		std::string fen = "bk6/8/8/8/8/8/8/BK6 w - - 0 1";
+		board_t board = MakeBoard(fen);
+		REQUIRE(board.result() == result_t::none);
+	}
+}
