@@ -22,6 +22,10 @@ using namespace std::chrono_literals;
 constexpr int PRINT_PV_MIN_DEPTH = 4;
 
 const std::string VERSION = "0.1.0";
+
+/** Protects std::cout. */
+std::mutex coutMutex;
+
 std::unique_ptr<board_t> board;
 engine::evalstate_ptr_t eval_state;
 /** Protects board and eval_state. */
@@ -47,10 +51,11 @@ std::string argsToStr(const uci::arguments_t& args) {
 
 void uciCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: uci");
-	std::cout << "id name Photon " << VERSION << std::endl;
-	std::cout << "id author Abhay Deshpande" << std::endl;
-	std::cout << "option name Ponder type check default true" << std::endl;
-	std::cout << "uciok" << std::endl;
+	std::lock_guard lock(coutMutex);
+	std::cout << "id name Photon " << VERSION << "\n"
+			  << "id author Abhay Deshpande\n"
+			  << "option name Ponder type check default true\n"
+			  << "uciok" << std::endl;
 }
 
 void newGameCommand(const uci::arguments_t&) {
@@ -135,6 +140,7 @@ void printPV(std::chrono::steady_clock::time_point start, const engine::evaluati
 		ss << " " << util::MoveToUCI(move);
 	}
 	LOG_F(INFO, "Sending info: %s", ss.str().c_str());
+	std::lock_guard lock(coutMutex);
 	std::cout << ss.str() << std::endl;
 }
 
@@ -204,6 +210,7 @@ void goCommand(const uci::arguments_t& args) {
 	}
 
 	CHECK_F(result.moves.size() > 0, "No moves found!");
+	std::lock_guard lock(coutMutex);
 	std::cout << "bestmove " << util::MoveToUCI(result.moves[0]);
 	if (result.moves.size() > 1) {
 		std::cout << " ponder " << util::MoveToUCI(result.moves[1]);
@@ -239,6 +246,7 @@ void goCommandLoop() {
 
 void isReadyCommand(const uci::arguments_t&) {
 	LOG_F(INFO, "Received command: isready");
+	std::lock_guard lock(coutMutex);
 	std::cout << "readyok" << std::endl;
 }
 
