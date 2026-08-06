@@ -13,6 +13,7 @@ Photon is a UCI-compliant chess engine written from scratch in C++! It uses Prin
 - Soft/Hard Time Management
 - Lazy Legal Move Filtering
 - Late Move Reduction
+- Pondering
 
 ## Environment Variables
 
