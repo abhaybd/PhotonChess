@@ -176,6 +176,7 @@ void goCommand(const uci::arguments_t& args) {
 				increment = std::chrono::milliseconds(std::stoi(args.at(incrementKey)));
 			}
 
+			// TODO: improve time management to use movestogo
 			// time management: 5% of remaining time + 50% of increment
 			auto softTime = baseTime > 20ms ? baseTime / 20 : 1ms;
 			auto hardTime = std::max(baseTime / 20 + increment / 2, 20ms);
