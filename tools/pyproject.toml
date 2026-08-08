@@ -9,3 +9,9 @@ dependencies = [
     "chess",
     "tqdm",
 ]
+
+[project.optional-dependencies]
+elo = [
+    "hydra-core>=1.3",
+    "maia3 @ git+https://github.com/CSSLab/maia3.git",
+]

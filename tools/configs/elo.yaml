@@ -1,0 +1,44 @@
+# Default Elo measurement: Photon commit(s) vs Maia3-5M reference bots.
+#
+# From tools/:
+#   uv run python scripts/elo.py engines.photon=[HEAD]
+#   uv run python scripts/elo.py engines.photon=[abc,def] engines.maia=null anchor.name=def anchor.rating=2300
+#   uv run python scripts/elo.py rounds=50 jobs=4
+
+engines:
+  # Photon revisions to build and include (git refs / SHAs).
+  photon:
+    - HEAD
+  # Maia3-5M skill levels. Set to null to omit Maia (then set anchor to a Photon engine).
+  maia:
+    elos: [1000, 1500, 2000, 2500]
+    cmd: maia3-5m
+    args: "--device cpu --no-use-amp"
+    tc: "60+1"
+
+# Ordo anchor. Defaults to Maia 2500 when Maia is enabled.
+# When engines.maia is null, set name to a commit / short hash / photon-<sha12>.
+anchor:
+  name: maia2500
+  rating: 2500
+
+rounds: 200
+jobs: null  # null → os.cpu_count()
+time_control: "8+0.08"
+
+ordo:
+  sims: 1000
+  confidence: 95.0
+
+paths:
+  builds_dir: builds
+  fastchess: bin/fastchess/fastchess
+  ordo: bin/ordo/ordo
+  opening_book: bin/8moves_v3.pgn
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: .
+  output_subdir: null
