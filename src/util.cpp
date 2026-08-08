@@ -169,6 +169,10 @@ uint8_t ParseSquare(std::string_view s) {
 	return row * 8 + col;
 }
 
+bool IsValidSquare(int square) {
+	return square >= 0 && square < 64;
+}
+
 player_t SquareColor(uint8_t square) {
 	int r = square / 8;
 	int c = square % 8;

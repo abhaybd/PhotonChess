@@ -54,6 +54,13 @@ result_t WinResult(player_t player);
 uint8_t ParseSquare(std::string_view s);
 
 /**
+ * @brief Checks if a value corresponds to a valid square.
+ * @param square The value to check.
+ * @return True if the value corresponds to a valid square, false otherwise.
+ */
+bool IsValidSquare(int square);
+
+/**
  * @brief Returns the color of a square.
  * @param square The square to get the color of.
  * @return The color of the square.

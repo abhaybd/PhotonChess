@@ -121,6 +121,7 @@ target_sources(photon_engine PRIVATE
     src/engine/search/lmr.cpp
     src/engine/static_eval/material.cpp
     src/engine/static_eval/static_eval.cpp
+    src/engine/static_eval/pawn_structure.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
