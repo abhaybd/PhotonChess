@@ -106,8 +106,8 @@ void positionCommand(const uci::arguments_t& args) {
 }
 
 void printPV(std::chrono::steady_clock::time_point start, const engine::evaluation_t& result,
-			 const engine::evalmetrics_t& metrics) {
-	if (metrics.depth < PRINT_PV_MIN_DEPTH) {
+			 const engine::evalmetrics_t& metrics, bool force = false) {
+	if (metrics.depth < PRINT_PV_MIN_DEPTH && !force) {
 		return;
 	}
 
@@ -204,7 +204,7 @@ void goCommand(const uci::arguments_t& args) {
 	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
 
 	// print final info (duplication with in-search printing is fine)
-	printPV(start, result, metrics);
+	printPV(start, result, metrics, true);
 
 	// if pondering/infinite, we can't emit bestmove until signaled by gui
 	if (params.ponder || isInfinite) {
