@@ -1,9 +1,12 @@
+#include "material.h"
+
 #include "photon/core.h"
 #include "photon/engine/eval.h"
 #include "photon/profile.h"
 #include "pst.h"
 
 #include <array>
+#include <bit>
 #include <loguru.hpp>
 #include <strings.h>
 

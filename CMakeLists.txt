@@ -110,8 +110,7 @@ target_link_libraries(photon_core PRIVATE loguru::loguru)
 add_library(photon_engine STATIC)
 add_library(Photon::Engine ALIAS photon_engine)
 target_sources(photon_engine PRIVATE
-    src/engine/eval.cpp
-    src/engine/heuristic.cpp
+    src/engine/engine.cpp
     src/engine/move_ordering/exchange.cpp
     src/engine/move_ordering/move_ordering.cpp
     src/engine/move_ordering/killer.cpp
@@ -120,6 +119,8 @@ target_sources(photon_engine PRIVATE
     src/engine/search/nullmove.cpp
     src/engine/search/aspiration.cpp
     src/engine/search/lmr.cpp
+    src/engine/static_eval/material.cpp
+    src/engine/static_eval/static_eval.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
