@@ -162,6 +162,14 @@ struct board_t {
 
 	/**
 	 * @brief Gets the result of the game.
+	 * @param pseudoLegalMoves A vector of all pseudo-legal moves from the current chessboard
+	 * state. Used to avoid a call to board_t::pseudoLegalMoves().
+	 * @return The result of the game
+	 */
+	result_t result(const std::vector<move_t>& pseudoLegalMoves) const;
+
+	/**
+	 * @brief Gets the result of the game.
 	 * @param hasLegalMoves If the player to move has legal moves. Used to avoid a call to
 	 * board_t::moves().
 	 * @return The result of the game

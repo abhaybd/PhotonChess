@@ -5,7 +5,7 @@
 
 namespace photon::engine {
 
-bool CanNullMove(const board_t& board) {
+bool CanNullMove(const board_t& board, const std::vector<move_t>& pseudoLegalMoves) {
 	PHOTON_PROFILE_FUNCTION();
 	// we can null move if a nonpawn piece exists (minimize zugzwang chances)
 	// and we're not in check
@@ -14,7 +14,7 @@ bool CanNullMove(const board_t& board) {
 			board.getBitboard(player, piece_t::bishop) |
 			board.getBitboard(player, piece_t::rook) |
 			board.getBitboard(player, piece_t::queen)) != 0 &&
-		   !board.inCheck(player) && board.result() == result_t::none;
+		   !board.inCheck(player) && board.result(pseudoLegalMoves) == result_t::none;
 }
 
 temp_nullmove_handle_t doNullMoveTemp(board_t& board) {

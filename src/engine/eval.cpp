@@ -184,7 +184,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		}
 		if (score >= beta) {
 			// make sure we're not in a terminal position
-			result_t result = board.result();
+			result_t result = board.result(plMoves);
 			if (result == WinResult(OtherPlayer(player))) {
 				return evaluation_t{MateDistanceToScore(plies), {}};
 			} else if (result == result_t::draw) {
@@ -205,7 +205,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 	// do null-move pruning
 	// TODO: add eval >= beta condition?
 	if (!isPV && allowNullMove && beta - alpha == 1 && !justNullMoved &&
-		depth >= NMP_REDUCTION && CanNullMove(board)) {
+		depth >= NMP_REDUCTION && CanNullMove(board, plMoves)) {
 		int d = depth - NMP_REDUCTION;
 		std::optional<evaluation_t> candidate;
 		{
@@ -308,7 +308,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 		} else {
 			// if we're in qsearch and there are no legal captures, double-check for stalemate
 			// note that checkmates are impossible here since we're not in check
-			if (board.result() == result_t::draw) {
+			if (board.result(plMoves) == result_t::draw) {
 				return evaluation_t{0, {}};
 			}
 		}

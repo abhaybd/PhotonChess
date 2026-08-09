@@ -209,9 +209,12 @@ bool board_t::isNonStalemateDraw() const {
 
 result_t board_t::result() const {
 	PHOTON_PROFILE_FUNCTION();
+	return result(pseudoLegalMoves());
+}
 
-	auto plMoves = pseudoLegalMoves();
-	bool hasLegalMoves = std::any_of(plMoves.begin(), plMoves.end(),
+result_t board_t::result(const std::vector<move_t>& pseudoLegalMoves) const {
+	PHOTON_PROFILE_FUNCTION();
+	bool hasLegalMoves = std::any_of(pseudoLegalMoves.begin(), pseudoLegalMoves.end(),
 									 [this](const move_t& m) { return isLegal(m); });
 	return result(hasLegalMoves);
 }

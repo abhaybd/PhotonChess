@@ -4,7 +4,7 @@
 
 namespace photon::engine {
 
-bool CanNullMove(const board_t& board);
+bool CanNullMove(const board_t& board, const std::vector<move_t>& pseudoLegalMoves);
 
 class temp_nullmove_handle_t;
 
