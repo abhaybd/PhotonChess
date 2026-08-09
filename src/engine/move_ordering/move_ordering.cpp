@@ -1,6 +1,7 @@
 #include "move_ordering.h"
 
 #include "exchange.h"
+#include "photon/profile.h"
 
 #include <algorithm>
 #include <loguru.hpp>
@@ -33,6 +34,8 @@ std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<mov
 									 const killer_table_t::killer_moves_t& killerMoves,
 									 const history_table_t& historyTable,
 									 std::optional<move_t> tt_move, bool qSearch) {
+	PHOTON_PROFILE_FUNCTION();
+
 	std::vector<scoredmove_t> scoredMoves;
 	scoredMoves.reserve(moves.size());
 	// sort moves by (high to low) TT move, good captures, killer, quiets, bad captures.
@@ -71,6 +74,8 @@ std::vector<scoredmove_t> ScoreMoves(const board_t& board, const std::vector<mov
 }
 
 move_t SelectMove(std::vector<scoredmove_t>& scoredMoves, size_t startIdx) {
+	PHOTON_PROFILE_FUNCTION();
+
 	for (size_t i = startIdx + 1; i < scoredMoves.size(); i++) {
 		if (scoredMoves[i].score > scoredMoves[startIdx].score) {
 			std::swap(scoredMoves[i], scoredMoves[startIdx]);

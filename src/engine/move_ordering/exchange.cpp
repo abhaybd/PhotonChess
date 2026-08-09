@@ -1,6 +1,7 @@
 #include "exchange.h"
 
 #include "../../moves.h"
+#include "photon/profile.h"
 
 #include <loguru.hpp>
 
@@ -10,6 +11,8 @@ namespace {
 std::array<int16_t, 6> PIECE_VALUES = {100, 300, 300, 500, 900, 10000};
 
 std::optional<move_t> GetCheapestCapture(const board_t& board, uint8_t square) {
+	PHOTON_PROFILE_FUNCTION();
+
 	player_t player = board.playerToMove();
 	// TODO: could be optimized. construct the capture move while checking if the square is
 	// attacked
@@ -45,6 +48,8 @@ int16_t EvaluateExchange(board_t& board, uint8_t square) {
 } // namespace
 
 int16_t EvaluateExchange(const board_t& board, move_t capture) {
+	PHOTON_PROFILE_FUNCTION();
+
 	DCHECK_F(capture.isCapture, "Cannot EvaluateExchange a non-capture move");
 	piece_t piece = capture.getCapturedPiece(board).value();
 	DCHECK_F(piece != piece_t::king, "Cannot capture a king");

@@ -1,10 +1,12 @@
 #include "nullmove.h"
 
 #include "../../zobrist.h"
+#include "photon/profile.h"
 
 namespace photon::engine {
 
 bool CanNullMove(const board_t& board) {
+	PHOTON_PROFILE_FUNCTION();
 	// we can null move if a nonpawn piece exists (minimize zugzwang chances)
 	// and we're not in check
 	player_t player = board.playerToMove();

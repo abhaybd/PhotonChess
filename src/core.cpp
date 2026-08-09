@@ -208,6 +208,8 @@ bool board_t::isNonStalemateDraw() const {
 }
 
 result_t board_t::result() const {
+	PHOTON_PROFILE_FUNCTION();
+
 	auto plMoves = pseudoLegalMoves();
 	bool hasLegalMoves = std::any_of(plMoves.begin(), plMoves.end(),
 									 [this](const move_t& m) { return isLegal(m); });
@@ -262,6 +264,8 @@ board_t& board_t::doMove(move_t move) {
 }
 
 board_t& board_t::doMove(move_t move, bool skipMetadata) {
+	PHOTON_PROFILE_FUNCTION();
+
 	DCHECK_F(move.getPlayer(*this) == playerToMove());
 
 	if (!skipMetadata) {
@@ -465,12 +469,16 @@ std::vector<move_t> board_t::pseudoLegalMoves() const {
 }
 
 bool board_t::isLegal(move_t move) {
+	PHOTON_PROFILE_FUNCTION();
+
 	auto player = playerToMove();
 	auto handle = doMoveTemp(move, true);
 	return !inCheck(player);
 }
 
 bool board_t::isLegal(move_t move) const {
+	PHOTON_PROFILE_FUNCTION();
+
 	auto copy = cheapCopy();
 	player_t player = copy.playerToMove();
 	copy.doMove(move, true);
@@ -478,6 +486,8 @@ bool board_t::isLegal(move_t move) const {
 }
 
 bool board_t::isSquareAttacked(player_t player, uint8_t square) const {
+	PHOTON_PROFILE_FUNCTION();
+
 	player_t otherPlayer = OtherPlayer(player);
 	bitboard_t enemyOccupancy = occupancyMap(OtherPlayer(player));
 	bitboard_t playerOccupancy = occupancyMap(player);

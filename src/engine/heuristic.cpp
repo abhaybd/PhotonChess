@@ -1,5 +1,6 @@
 #include "photon/core.h"
 #include "photon/engine/eval.h"
+#include "photon/profile.h"
 #include "pst.h"
 
 #include <array>
@@ -49,6 +50,8 @@ int16_t GetPhase(const board_t& board) {
 } // namespace
 
 int16_t PositionHeuristic(const board_t& board) {
+	PHOTON_PROFILE_FUNCTION();
+
 	int16_t score = 0;
 	int16_t phase = GetPhase(board);
 

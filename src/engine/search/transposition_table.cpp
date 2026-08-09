@@ -2,6 +2,7 @@
 
 #include "photon/core.h"
 #include "photon/engine/eval.h"
+#include "photon/profile.h"
 
 #include <bit>
 
@@ -41,6 +42,8 @@ transposition_table_t::transposition_table_t(size_t size) : table(size), numVali
 
 std::optional<transposition_table_t::entry_t> transposition_table_t::get(const board_t& board,
 																		 int plies) const {
+	PHOTON_PROFILE_FUNCTION();
+
 	size_t idx = board.hash & (table.size() - 1);
 	const packed_entry_t& entry = table[idx];
 	if (isEntryValid(entry) && entry.hash == packHash(board.hash)) {
