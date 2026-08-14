@@ -1,6 +1,7 @@
 #include "pawn_structure.h"
 
 #include "phase.h"
+#include "photon/profile.h"
 #include "photon/util.h"
 
 #include <bit>
@@ -155,6 +156,8 @@ int16_t PawnScore(const board_t& board, player_t player, int16_t phase) {
 } // namespace
 
 int16_t PawnStructureScore(const board_t& board, int16_t phase) {
+	PHOTON_PROFILE_FUNCTION();
+
 	int16_t score = 0;
 	score += PawnScore(board, player_t::white, phase);
 	score -= PawnScore(board, player_t::black, phase);
