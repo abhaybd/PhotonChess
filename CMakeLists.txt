@@ -122,6 +122,7 @@ target_sources(photon_engine PRIVATE
     src/engine/static_eval/material.cpp
     src/engine/static_eval/static_eval.cpp
     src/engine/static_eval/pawn_structure.cpp
+    src/engine/static_eval/phase.cpp
 )
 target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
