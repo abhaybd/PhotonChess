@@ -1,5 +1,6 @@
 #include "pawn_structure.h"
 
+#include "phase.h"
 #include "photon/util.h"
 
 #include <bit>
@@ -21,22 +22,22 @@ constexpr std::array<bitboard_t, 8> FILE_MASKS = {
 	FILE_A_MASK << 4, FILE_A_MASK << 5, FILE_A_MASK << 6, FILE_A_MASK << 7,
 };
 
-constexpr std::array<int16_t, 8> SUPPORTED_PASSER_FILE_BONUS = {
-	50, 80, 80, 80, 80, 80, 80, 50,
-};
-constexpr std::array<int16_t, 8> SUPPORTED_PASSER_RANK_BONUS = {
-	0, 10, 10, 20, 50, 90, 120, 0,
-};
-constexpr std::array<int16_t, 8> PASSED_FILE_BONUS = {
-	30, 60, 60, 60, 60, 60, 60, 30,
-};
-constexpr std::array<int16_t, 8> PASSED_RANK_BONUS = {
-	0, 10, 10, 20, 30, 60, 90, 0,
-};
-constexpr int16_t DOUBLED_PENALTY = 20;
-constexpr int16_t WEAK_PENALTY = 10;
+constexpr std::array<std::pair<int16_t, int16_t>, 8> PASSED_FILE_BONUS = {
+	{{4, 8}, {2, 6}, {-4, -4}, {-10, -8}, {-10, -8}, {-4, -4}, {2, 6}, {4, 8}}};
+constexpr std::array<std::pair<int16_t, int16_t>, 8> PASSED_RANK_BONUS = {
+	{{0, 0}, {2, 15}, {6, 20}, {12, 32}, {35, 60}, {75, 105}, {130, 170}, {0, 0}}};
+/** Indexed by rank */
+constexpr std::array<std::pair<int16_t, int16_t>, 8> SUPPORTED_PASSER_BONUS = {
+	{{0, 0}, {4, 6}, {5, 9}, {8, 14}, {13, 20}, {20, 30}, {28, 40}, {0, 0}}};
+
+constexpr std::pair<int16_t, int16_t> DOUBLED_PENALTY = {12, 45};
+constexpr std::pair<int16_t, int16_t> WEAK_PENALTY = {8, 20};
 // on top of WEAK_PENALTY
-constexpr int16_t WEAK_UNOPPOSED_PENALTY = 4;
+constexpr std::pair<int16_t, int16_t> WEAK_UNOPPOSED_PENALTY = {10, 22};
+
+int16_t InterpolateScore(std::pair<int16_t, int16_t> score, int16_t phase) {
+	return engine::InterpolateScore(score.first, score.second, phase);
+}
 
 /**
  * Check if the file has pawns of a given color starting from a given square and going forwards
@@ -91,12 +92,13 @@ bool IsSupported(const board_t& board, player_t player, uint8_t square) {
 	return false;
 }
 
-int16_t PawnScore(const board_t& board, player_t player, uint8_t square) {
+int16_t PawnScore(const board_t& board, player_t player, uint8_t square, int16_t phase) {
 	bool isWhite = player == player_t::white;
 	player_t otherPlayer = util::OtherPlayer(player);
 
 	bool isOpposed = FileHasPawns(board, otherPlayer, square, isWhite);
 	bool isDoubled = FileHasPawns(board, player, square, isWhite);
+	bool isSupported = IsSupported(board, player, square);
 
 	bool isPassed = !isOpposed && !isDoubled;
 	if (isPassed) {
@@ -117,35 +119,34 @@ int16_t PawnScore(const board_t& board, player_t player, uint8_t square) {
 	int16_t score = 0;
 
 	if (isPassed) {
+		int file = square % 8;
 		// xor 56 flips the board if black
 		int rank = (isWhite ? square : square ^ 56) / 8;
-		if (IsSupported(board, player, square)) {
-			score += SUPPORTED_PASSER_FILE_BONUS[square % 8];
-			score += SUPPORTED_PASSER_RANK_BONUS[rank];
-		} else {
-			score += PASSED_FILE_BONUS[square % 8];
-			score += PASSED_RANK_BONUS[rank];
+		score += InterpolateScore(PASSED_RANK_BONUS[rank], phase);
+		score += InterpolateScore(PASSED_FILE_BONUS[file], phase);
+		if (isSupported) {
+			score += InterpolateScore(SUPPORTED_PASSER_BONUS[rank], phase);
 		}
 	}
-	if (isDoubled) {
-		score -= DOUBLED_PENALTY;
+	if (isDoubled && !isSupported) {
+		score -= InterpolateScore(DOUBLED_PENALTY, phase);
 	}
 	if (isWeak) {
-		score -= WEAK_PENALTY;
+		score -= InterpolateScore(WEAK_PENALTY, phase);
 		if (!isOpposed) {
-			score -= WEAK_UNOPPOSED_PENALTY;
+			score -= InterpolateScore(WEAK_UNOPPOSED_PENALTY, phase);
 		}
 	}
 
 	return score;
 }
 
-int16_t PawnScore(const board_t& board, player_t player) {
+int16_t PawnScore(const board_t& board, player_t player, int16_t phase) {
 	bitboard_t pawns = board.getBitboard(player, piece_t::pawn);
 	int16_t score = 0;
 	while (pawns != 0) {
 		uint8_t square = std::countr_zero(pawns);
-		score += PawnScore(board, player, square);
+		score += PawnScore(board, player, square, phase);
 		pawns &= ~(1ULL << square);
 	}
 	return score;
@@ -153,10 +154,10 @@ int16_t PawnScore(const board_t& board, player_t player) {
 
 } // namespace
 
-int16_t PawnStructureScore(const board_t& board) {
+int16_t PawnStructureScore(const board_t& board, int16_t phase) {
 	int16_t score = 0;
-	score += PawnScore(board, player_t::white);
-	score -= PawnScore(board, player_t::black);
+	score += PawnScore(board, player_t::white, phase);
+	score -= PawnScore(board, player_t::black, phase);
 	return score;
 }
 

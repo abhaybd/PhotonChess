@@ -1,9 +1,8 @@
-#include "photon/engine/eval.h"
-
 #include "move_ordering/history.h"
 #include "move_ordering/killer.h"
 #include "move_ordering/move_ordering.h"
 #include "photon/core.h"
+#include "photon/engine/eval.h"
 #include "photon/profile.h"
 #include "photon/util.h"
 #include "search/aspiration.h"
