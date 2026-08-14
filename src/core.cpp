@@ -437,6 +437,7 @@ board_t& board_t::doMove(move_t move, bool skipMetadata) {
 }
 
 temp_move_handle_t board_t::doMoveTemp(move_t move, bool skipMetadata) {
+	PHOTON_PROFILE_FUNCTION();
 	return temp_move_handle_t(this, move, skipMetadata);
 }
 
