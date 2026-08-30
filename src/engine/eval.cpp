@@ -52,6 +52,8 @@ constexpr int ASPIRATION_MIN_DEPTH = 3;
 constexpr int LMR_MIN_DEPTH = 3;
 constexpr int LMR_MIN_IDX = 2;
 constexpr int LMR_REDUCTION = 1;
+constexpr int RFP_MARGIN_PER_PLY = 150;
+constexpr int RFP_MAX_DEPTH = 8;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
@@ -83,6 +85,14 @@ std::optional<evaluation_t> operator-(std::optional<evaluation_t>&& a) {
  */
 int16_t MateDistanceToScore(int plies) {
 	return static_cast<int16_t>(-CHECKMATE_SCORE + plies);
+}
+
+int16_t StaticEval(const board_t& board) {
+	int16_t eval = PositionHeuristic(board);
+	if (board.playerToMove() == player_t::black) {
+		eval = -eval;
+	}
+	return eval;
 }
 
 // TODO: move some params to dedicated search stack with struct
@@ -165,10 +175,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 				return evaluation_t{0, {}};
 			}
 		} else {
-			int16_t score = PositionHeuristic(board);
-			if (player == player_t::black) {
-				score = -score;
-			}
+			int16_t score = StaticEval(board);
 			return evaluation_t{score, {}};
 		}
 	}
@@ -178,10 +185,7 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 
 	if (qSearch) {
 		// stand pat in qsearch
-		int16_t score = PositionHeuristic(board);
-		if (player == player_t::black) {
-			score = -score;
-		}
+		int16_t score = StaticEval(board);
 		if (score >= beta) {
 			// make sure we're not in a terminal position
 			result_t result = board.result(plMoves);
@@ -200,6 +204,13 @@ std::optional<evaluation_t> pvs(board_t& board, const searchparams_t& params, in
 			alpha = score;
 		}
 		best.score = score;
+	}
+
+	// reverse-futility pruning
+	int16_t staticEval = StaticEval(board);
+	if (!isPV && !inCheck && depth <= RFP_MAX_DEPTH && std::abs(beta) < MATE_SCORE_BOUND &&
+		staticEval - RFP_MARGIN_PER_PLY * depth >= beta) {
+		return evaluation_t{static_cast<int16_t>((staticEval + beta) / 2), {}};
 	}
 
 	// do null-move pruning
