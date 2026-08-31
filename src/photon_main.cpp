@@ -1,17 +1,8 @@
-#include "photon/core.h"
-#include "photon/engine/eval.h"
-#include "photon/profile.h"
-#include "photon/util.h"
+#include "photon/engine/photon_uci.h"
 
-#include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <iostream>
 #include <loguru.hpp>
-#include <memory>
-#include <mutex>
-#include <sstream>
-#include <thread>
 
 #include <uci/Listener.h>
 #include <uci/events.h>
@@ -19,266 +10,60 @@
 using namespace photon;
 using namespace std::chrono_literals;
 
-constexpr int PRINT_PV_MIN_DEPTH = 7;
-
-const std::string VERSION = "0.1.0";
-
-/** Protects std::cout. */
-std::mutex coutMutex;
-
-std::unique_ptr<board_t> board;
-engine::evalstate_ptr_t evalState;
-/** Protects board and eval_state. */
-std::mutex searchMutex;
-
-/** Protects goArgs, quitting, and goArgsCV. */
-std::mutex argsMutex;
-std::optional<uci::arguments_t> goArgs;
-std::condition_variable goArgsCV;
-bool quitting = false;
-
-std::atomic_flag stopSearch;
-
-std::string argsToStr(const uci::arguments_t& args) {
-	std::stringstream ss;
-	ss << "{";
-	for (const auto& entry : args) {
-		ss << "\"" << entry.first << "\": \"" << entry.second << "\", ";
-	}
-	auto s = ss.str();
-	return s.substr(0, s.size() - 2) + "}";
-}
-
-void uciCommand(const uci::arguments_t&) {
-	LOG_F(INFO, "Received command: uci");
-	std::lock_guard lock(coutMutex);
-	std::cout << "id name Photon " << VERSION << "\n"
-			  << "id author Abhay Deshpande\n"
-			  << "option name Ponder type check default true\n"
-			  << "uciok" << std::endl;
-}
-
-void newGameCommand(const uci::arguments_t&) {
-	LOG_F(INFO, "Received command: ucinewgame");
-	std::lock_guard searchLock(searchMutex);
-	std::lock_guard argsLock(argsMutex);
-	board.reset();
-	evalState = engine::CreateEvalState();
-}
-
-void positionCommand(const uci::arguments_t& args) {
-	// TODO: avoid resetting if board is already in the same position, and just apply moves
-	LOG_SCOPE_F(INFO, "Received command: position");
-	std::lock_guard lock(searchMutex);
-
-	board.reset();
-	// don't reset eval_state if it exists so we can reuse the transposition table if possible
-	if (!evalState) {
-		evalState = engine::CreateEvalState();
-	}
-
+engine::position_cmd_t parsePositionArgs(const uci::arguments_t& args) {
+	engine::position_cmd_t cmd;
 	if (auto fenIt = args.find("fen"); fenIt != args.end()) {
-		LOG_F(INFO, "Initial FEN: %s", fenIt->second.c_str());
-		board = std::make_unique<board_t>(util::MakeBoard(fenIt->second));
-	} else if (args.find("startpos") != args.end()) {
-		LOG_F(INFO, "Starting from default position");
-		board = std::make_unique<board_t>(util::DefaultBoard());
+		cmd.fen = fenIt->second;
 	}
-
-	auto movesIt = args.find("moves");
-	if (movesIt != args.end()) {
-		std::string_view moves = movesIt->second;
-		LOG_F(INFO, "Moves=%s", moves.data());
+	if (auto movesIt = args.find("moves"); movesIt != args.end()) {
+		std::string_view movesStr = movesIt->second;
+		LOG_F(INFO, "Moves=%s", movesStr.data());
 
 		size_t pos = 0;
 		std::string token;
-		while ((pos = moves.find(" ")) != std::string::npos) {
-			token = moves.substr(0, pos);
+		while ((pos = movesStr.find(" ")) != std::string::npos) {
+			token = movesStr.substr(0, pos);
 			if (!token.empty()) {
-				board->doMove(util::MoveFromUCI(*board, token));
+				cmd.moves.push_back(token);
 			}
-			moves = moves.substr(pos + 1);
+			movesStr = movesStr.substr(pos + 1);
 		}
-		board->doMove(util::MoveFromUCI(*board, moves));
-
-		LOG_F(INFO, "Final FEN: %s", board->fen().c_str());
-	}
-}
-
-void printPV(std::chrono::steady_clock::time_point start, const engine::evaluation_t& result,
-			 const engine::evalmetrics_t& metrics, bool force = false) {
-	if (metrics.depth < PRINT_PV_MIN_DEPTH && !force) {
-		return;
-	}
-
-	std::chrono::duration<double> elapsed = decltype(start)::clock::now() - start;
-	auto elapsedMillis = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
-
-	std::stringstream ss;
-	ss << "info";
-	ss << " depth " << metrics.depth;
-	ss << " nodes " << metrics.nodes;
-	ss << " nps " << static_cast<int>(metrics.nodes / elapsed.count());
-	ss << " time " << elapsedMillis.count();
-	ss << " hashfull " << metrics.ttableUsage;
-
-	ss << " score ";
-	// report mate in fullmoves or score
-	auto mateDist = engine::ScoreToMateDistance(result.score);
-	if (mateDist.has_value()) {
-		if (result.score > 0) {
-			ss << "mate " << (*mateDist + 1) / 2;
-		} else {
-			ss << "mate -" << (*mateDist + 1) / 2;
-		}
-	} else {
-		ss << "cp " << result.score;
-	}
-
-	ss << " pv";
-	for (move_t move : result.moves) {
-		ss << " " << util::MoveToUCI(move);
-	}
-	LOG_F(INFO, "Sending info: %s", ss.str().c_str());
-	std::lock_guard lock(coutMutex);
-	std::cout << ss.str() << std::endl;
-}
-
-void goCommand(const uci::arguments_t& args) {
-	PHOTON_PROFILE_FUNCTION();
-
-	LOG_SCOPE_F(INFO, "Received command: go");
-	LOG_F(INFO, "Args: %s", argsToStr(args).c_str());
-
-	stopSearch.clear();
-
-	engine::searchparams_t params;
-	params.ponder = args.contains("ponder");
-	if (args.find("depth") != args.end()) {
-		params.maxDepth = std::stoi(args.at("depth"));
-	}
-	if (args.find("movetime") != args.end()) {
-		std::chrono::milliseconds moveTime(std::stoi(args.at("movetime")));
-		params.maxTime = std::make_pair(moveTime, moveTime);
-	} else {
-		std::string baseTimeKey, incrementKey;
-		if (board->playerToMove() == player_t::white) {
-			baseTimeKey = "wtime";
-			incrementKey = "winc";
-		} else {
-			baseTimeKey = "btime";
-			incrementKey = "binc";
-		}
-		if (args.find(baseTimeKey) != args.end()) {
-			std::chrono::milliseconds baseTime(std::stoi(args.at(baseTimeKey)));
-			std::chrono::milliseconds increment(0);
-			if (args.find(incrementKey) != args.end()) {
-				increment = std::chrono::milliseconds(std::stoi(args.at(incrementKey)));
-			}
-
-			// TODO: improve time management to use movestogo
-			// time management: 5% of remaining time + 50% of increment
-			auto softTime = baseTime > 20ms ? baseTime / 20 : 1ms;
-			auto hardTime = std::max(baseTime / 20 + increment / 2, 20ms);
-			params.maxTime = std::make_pair(softTime, hardTime);
+		if (!movesStr.empty()) {
+			cmd.moves.push_back(std::string(movesStr));
 		}
 	}
-	if (args.find("nodes") != args.end()) {
-		params.maxNodes = std::stoi(args.at("nodes"));
-	}
-	bool isInfinite = args.contains("infinite");
-	CHECK_F(params.ponder ||
-				(isInfinite != (params.maxDepth || params.maxTime || params.maxNodes)),
-			"Infinite search must be specified with no other search limits");
-
-	CHECK_F(args.find("mate") == args.end(), "Mate search not supported");
-
-	auto start = std::chrono::steady_clock::now();
-	params.onResult = [start](const engine::evaluation_t& result,
-							  const engine::evalmetrics_t& metrics) {
-		printPV(start, result, metrics);
-	};
-	auto [result, metrics] = engine::EvalBoard(*board, params, *evalState);
-	auto end = std::chrono::steady_clock::now();
-	std::chrono::duration<double> elapsed = end - start;
-	LOG_F(INFO, "Search took %.3f seconds", elapsed.count());
-
-	// print final info (duplication with in-search printing is fine)
-	printPV(start, result, metrics, true);
-
-	// if pondering/infinite, we can't emit bestmove until signaled by gui
-	if (params.ponder || isInfinite) {
-		while (!stopSearch.test()) {
-			std::this_thread::sleep_for(1ms);
-		}
-	}
-
-	CHECK_F(result.moves.size() > 0, "No moves found!");
-	std::lock_guard lock(coutMutex);
-	std::cout << "bestmove " << util::MoveToUCI(result.moves[0]);
-	if (result.moves.size() > 1) {
-		std::cout << " ponder " << util::MoveToUCI(result.moves[1]);
-	}
-	std::cout << std::endl;
+	return cmd;
 }
 
-void goCommandAsync(const uci::arguments_t& args) {
-	std::lock_guard lock(argsMutex);
-	goArgs = args;
-	goArgsCV.notify_one();
-}
-
-void goCommandLoop() {
-	while (true) {
-		uci::arguments_t args;
-		{
-			std::unique_lock lock(argsMutex);
-			goArgsCV.wait(lock, [&]() { return goArgs.has_value() || quitting; });
-			if (quitting) {
-				break;
-			}
-			args = *goArgs;
-			goArgs.reset();
-		}
-
-		{
-			std::lock_guard lock(searchMutex);
-			goCommand(args);
-		}
+engine::go_cmd_t parseGoArgs(const uci::arguments_t& args) {
+	engine::go_cmd_t cmd;
+	cmd.ponder = args.contains("ponder");
+	if (auto depthIt = args.find("depth"); depthIt != args.end()) {
+		cmd.depth = std::stoi(depthIt->second);
 	}
-}
-
-void isReadyCommand(const uci::arguments_t&) {
-	LOG_F(INFO, "Received command: isready");
-	std::lock_guard lock(coutMutex);
-	std::cout << "readyok" << std::endl;
-}
-
-void ponderHitCommand(const uci::arguments_t&) {
-	LOG_F(INFO, "Received command: ponderhit");
-	if (evalState) {
-		stopSearch.test_and_set();
-		engine::PonderHit(*evalState);
+	if (auto movetimeIt = args.find("movetime"); movetimeIt != args.end()) {
+		cmd.movetime = std::chrono::milliseconds(std::stoi(movetimeIt->second));
 	}
-}
-
-void stopCommand(const uci::arguments_t&) {
-	LOG_F(INFO, "Received command: stop");
-	if (evalState) {
-		stopSearch.test_and_set();
-		engine::StopSearch(*evalState);
+	if (auto wtimeIt = args.find("wtime"); wtimeIt != args.end()) {
+		cmd.wtime = std::chrono::milliseconds(std::stoi(wtimeIt->second));
 	}
-}
-
-void quit() {
-	if (evalState) {
-		stopSearch.test_and_set();
-		engine::StopSearch(*evalState);
+	if (auto btimeIt = args.find("btime"); btimeIt != args.end()) {
+		cmd.btime = std::chrono::milliseconds(std::stoi(btimeIt->second));
 	}
-
-	std::lock_guard lock(argsMutex);
-	quitting = true;
-	goArgsCV.notify_all();
+	if (auto wincIt = args.find("winc"); wincIt != args.end()) {
+		cmd.winc = std::chrono::milliseconds(std::stoi(wincIt->second));
+	}
+	if (auto bincIt = args.find("binc"); bincIt != args.end()) {
+		cmd.binc = std::chrono::milliseconds(std::stoi(bincIt->second));
+	}
+	if (auto nodesIt = args.find("nodes"); nodesIt != args.end()) {
+		cmd.nodes = std::stoi(nodesIt->second);
+	}
+	if (args.contains("infinite")) {
+		cmd.infinite = true;
+	}
+	CHECK_F(args.find("mate") == args.end(), "go mate is not supported");
+	return cmd;
 }
 
 int main(int argc, char** argv) {
@@ -306,24 +91,29 @@ int main(int argc, char** argv) {
 
 	LOG_F(INFO, "Photon started");
 
+	engine::PhotonUCI photon(std::cout);
 	uci::Listener listener;
 
-	listener.addListener(uci::event::UCI, uciCommand);
-	listener.addListener(uci::event::POSITION, positionCommand);
-	listener.addListener(uci::event::UCINEWGAME, newGameCommand);
-	listener.addListener(uci::event::ISREADY, isReadyCommand);
-	listener.addListener(uci::event::GO, goCommandAsync);
-	listener.addListener(uci::event::PONDERHIT, ponderHitCommand);
-	listener.addListener(uci::event::STOP, stopCommand);
-	listener.addListener(uci::event::QUIT, [&](const uci::arguments_t&) {
-		LOG_F(INFO, "Received command: quit");
-		listener.stopListening();
-		quit();
+	listener.addListener(uci::event::UCI,
+						 [&photon](const uci::arguments_t&) { photon.uci(); });
+	listener.addListener(uci::event::POSITION, [&photon](const uci::arguments_t& args) {
+		photon.position(parsePositionArgs(args));
 	});
+	listener.addListener(uci::event::UCINEWGAME,
+						 [&photon](const uci::arguments_t&) { photon.ucinewgame(); });
+	listener.addListener(uci::event::ISREADY,
+						 [&photon](const uci::arguments_t&) { photon.isready(); });
+	listener.addListener(uci::event::GO, [&photon](const uci::arguments_t& args) {
+		photon.goAsync(parseGoArgs(args));
+	});
+	listener.addListener(uci::event::PONDERHIT,
+						 [&photon](const uci::arguments_t&) { photon.ponderhit(); });
+	listener.addListener(uci::event::STOP,
+						 [&photon](const uci::arguments_t&) { photon.stop(); });
+	listener.addListener(uci::event::QUIT,
+						 [&](const uci::arguments_t&) { listener.stopListening(); });
 
-	std::thread goCommandThread(goCommandLoop);
 	listener.setupListener();
-	goCommandThread.join();
 
 	return 0;
 }

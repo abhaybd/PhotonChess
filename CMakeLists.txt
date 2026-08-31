@@ -97,9 +97,17 @@ target_include_directories(photon_engine PUBLIC "include")
 target_link_libraries(photon_engine PUBLIC photon_core)
 target_link_libraries(photon_engine PRIVATE loguru::loguru)
 
+add_library(photon_uci STATIC)
+add_library(Photon::UCI ALIAS photon_uci)
+target_sources(photon_uci PRIVATE
+    src/engine/photon_uci.cpp
+)
+target_include_directories(photon_uci PUBLIC "include")
+target_link_libraries(photon_uci PUBLIC photon_engine -lpthread)
+target_link_libraries(photon_uci PRIVATE loguru::loguru)
+
 add_executable(photon src/photon_main.cpp)
-target_link_libraries(photon photon_engine loguru::loguru)
-target_link_libraries(photon uci)
+target_link_libraries(photon photon_uci uci loguru::loguru)
 
 add_executable(tests
     test/CoreTest.cpp
