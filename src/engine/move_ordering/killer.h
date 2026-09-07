@@ -20,9 +20,9 @@ public:
 	 */
 	explicit killer_table_t(size_t size);
 
-	void add(move_t move, uint ply);
+	void add(move_t move, unsigned int ply);
 
-	bool isKiller(move_t move, uint ply) const;
+	bool isKiller(move_t move, unsigned int ply) const;
 
 	void reset();
 
@@ -30,13 +30,13 @@ private:
 	/** Maps plies to killer moves. */
 	std::vector<std::array<move_t, NUM_KILLER_MOVES>> killers;
 	/** Number of valid killers for each ply, in range [0, NUM_KILLER_MOVES] */
-	std::vector<uint> validKillers;
+	std::vector<unsigned int> validKillers;
 
 public:
 	using killer_moves_t =
 		std::ranges::subrange<decltype(killers)::value_type::const_iterator>;
 
-	killer_moves_t getKillerMoves(uint ply) const;
+	killer_moves_t getKillerMoves(unsigned int ply) const;
 };
 
 } // namespace photon::engine

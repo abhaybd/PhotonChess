@@ -8,12 +8,12 @@ killer_table_t::killer_table_t(size_t size) : killers(size), validKillers(size) 
 	reset();
 }
 
-void killer_table_t::add(move_t move, uint ply) {
+void killer_table_t::add(move_t move, unsigned int ply) {
 	if (ply >= killers.size()) {
 		return;
 	}
 	auto& moves = killers[ply];
-	uint& numValid = validKillers[ply];
+	unsigned int& numValid = validKillers[ply];
 	auto end = moves.begin() + numValid;
 	auto it = std::find(moves.begin(), end, move);
 
@@ -31,7 +31,7 @@ void killer_table_t::add(move_t move, uint ply) {
 	*it = move;
 }
 
-bool killer_table_t::isKiller(move_t move, uint ply) const {
+bool killer_table_t::isKiller(move_t move, unsigned int ply) const {
 	if (ply >= validKillers.size()) {
 		return false;
 	}
@@ -46,7 +46,7 @@ void killer_table_t::reset() {
 	}
 }
 
-killer_table_t::killer_moves_t killer_table_t::getKillerMoves(uint ply) const {
+killer_table_t::killer_moves_t killer_table_t::getKillerMoves(unsigned int ply) const {
 	if (ply >= validKillers.size()) {
 		return {};
 	}

@@ -6,11 +6,6 @@
 #include <string>
 #include <vector>
 
-// TODO: replace uint with unsigned int.
-#ifdef __EMSCRIPTEN__
-using uint = unsigned;
-#endif
-
 namespace photon {
 
 /**

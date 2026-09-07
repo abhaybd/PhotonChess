@@ -25,10 +25,10 @@ bool InsufficientMaterial(const board_t& board) {
 	}
 
 	// number of white/black bishops/knights
-	uint wb = std::popcount(board.getBitboard(player_t::white, piece_t::bishop));
-	uint bb = std::popcount(board.getBitboard(player_t::black, piece_t::bishop));
-	uint wn = std::popcount(board.getBitboard(player_t::white, piece_t::knight));
-	uint bn = std::popcount(board.getBitboard(player_t::black, piece_t::knight));
+	unsigned int wb = std::popcount(board.getBitboard(player_t::white, piece_t::bishop));
+	unsigned int bb = std::popcount(board.getBitboard(player_t::black, piece_t::bishop));
+	unsigned int wn = std::popcount(board.getBitboard(player_t::white, piece_t::knight));
+	unsigned int bn = std::popcount(board.getBitboard(player_t::black, piece_t::knight));
 
 	if (wb == 0 && bb == 0 && wn == 0 && bn == 0) {
 		// only kings

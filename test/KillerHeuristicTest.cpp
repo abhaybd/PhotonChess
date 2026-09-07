@@ -10,7 +10,7 @@ using namespace photon::engine;
 
 namespace {
 
-bool isKiller(const killer_table_t& killerTable, move_t move, uint ply) {
+bool isKiller(const killer_table_t& killerTable, move_t move, unsigned int ply) {
 	bool isKiller = killerTable.isKiller(move, ply);
 	auto killerMoves = killerTable.getKillerMoves(ply);
 	bool isInRange = std::find(killerMoves.begin(), killerMoves.end(), move) != killerMoves.end();
