@@ -42,6 +42,17 @@ cmake --build . -j
 
 By default, photon is compiled in release mode with compiler optimizations enabled. To compile in debug mode with debug symbols, add `-DCMAKE_BUILD_TYPE=Debug`.
 
+### Compilation flags
+
+The following flags can be passed to the CMake configure command (e.g. `cmake .. -DPHOTON_TTABLE_SIZE=24`).
+
+| Flag                       | Description                                                                                          | Default                       |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `PHOTON_PROFILING_ENABLED` | Enable the built-in scoped profiler. Adds per-scope timing overhead.                                 | `OFF`                         |
+| `PHOTON_TTABLE_SIZE`       | Log2 of the number of transposition-table entries (`2^N` entries).                                   | `22` native, `20` WebAssembly |
+
+
+
 ### Testing
 
 Photon is tested at several levels, from fast unit tests to full engine-vs-engine matches.

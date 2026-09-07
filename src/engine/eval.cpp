@@ -56,9 +56,8 @@ constexpr int RFP_MARGIN_PER_PLY = 150;
 constexpr int RFP_MAX_DEPTH = 8;
 // Any |score| >= this encodes a forced mate
 constexpr int16_t MATE_SCORE_BOUND = CHECKMATE_SCORE - MAX_PLIES;
-// TODO: allow setting via compilation flag
-#ifdef __EMSCRIPTEN__
-constexpr size_t TTABLE_SIZE = 1ULL << 20;
+#ifdef PHOTON_TTABLE_SIZE
+constexpr size_t TTABLE_SIZE = 1ULL << PHOTON_TTABLE_SIZE;
 #else
 constexpr size_t TTABLE_SIZE = 1ULL << 22;
 #endif

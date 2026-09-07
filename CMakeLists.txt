@@ -22,12 +22,16 @@ Include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 
+option(PHOTON_PROFILING_ENABLED "Enable the built-in scoped profiler (adds per-scope timing overhead)" OFF)
+set(PHOTON_TTABLE_SIZE "" CACHE STRING "2^PHOTON_TTABLE_SIZE is the number of entries in the transposition table")
+
 if(EMSCRIPTEN)
     add_compile_options(-pthread)
     add_link_options(-pthread)
+    if(NOT PHOTON_TTABLE_SIZE)
+        set(PHOTON_TTABLE_SIZE 20)
+    endif()
 endif()
-
-option(PHOTON_PROFILING_ENABLED "Enable the built-in scoped profiler (adds per-scope timing overhead)" OFF)
 
 # Logging with Loguru (wrap in function to limit scope)
 
@@ -84,6 +88,11 @@ if(PHOTON_PROFILING_ENABLED)
     message(STATUS "Photon profiling: ENABLED")
 else()
     message(STATUS "Photon profiling: disabled")
+endif()
+
+if(PHOTON_TTABLE_SIZE)
+    message(STATUS "Photon ttable size: ${PHOTON_TTABLE_SIZE}")
+    add_compile_definitions(PHOTON_TTABLE_SIZE=${PHOTON_TTABLE_SIZE})
 endif()
 
 add_library(photon_core STATIC)
