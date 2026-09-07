@@ -14,6 +14,7 @@ Photon is a UCI-compliant chess engine written from scratch in C++! It uses Prin
 - Lazy Legal Move Filtering
 - Late Move Reduction
 - Pondering
+- Reverse Futility Pruning
 
 ## Environment Variables
 
@@ -27,7 +28,7 @@ The following environment variables can be used to configure non-search behavior
 
 ## Usage (GUI)
 
-You can play against Photon in a GUI with [cutechess](https://github.com/cutechess/cutechess). Install it or build it from source, add Photon as an engine in the preferences, and then start a new game!
+You can play against Photon in a GUI with [cutechess](https://github.com/cutechess/cutechess). Install it or build it from source, add Photon as an engine in the preferences (after [building Photon](#development)), and then start a new game!
 
 ## Development
 
@@ -78,3 +79,42 @@ Photon can be built with profiling enabled, for debugging. To do so, add `-DPHOT
 ### Code Format
 
 See `.clang-format` for style rules. Code can be automatically formated with `clang-format`, or running `./format.sh`. Note that `clang-format` v16 or greater is required.
+
+
+### Running in a Browser
+
+Photon can also be compiled to WebAssembly so you can play it in a browser. The web UI talks to the engine over UCI (including pondering) and is built as a static site.
+
+#### Dependencies
+
+The WASM engine requires the [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) (`emcmake` / `emcc`) and Node.js. Install Emscripten if you do not already have it:
+
+```bash
+git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
+cd ~/emsdk
+./emsdk install latest
+./emsdk activate latest
+source ~/emsdk/emsdk_env.sh
+```
+
+#### Compiling to WASM
+
+`source ~/emsdk/emsdk_env.sh` must be run in each new shell (or added to `~/.bashrc`). Then from the repository root:
+
+```bash
+./scripts/build-web.sh
+```
+
+This compiles the engine to `web/public/engine/` and the site to `web/dist/`.
+
+#### Building the Frontend
+
+After compiling the WASM engine at least once:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+When running locally, the Vite dev server sends Cross-Origin Isolation headers (`COOP`/`COEP`) so `SharedArrayBuffer` and pthreads work locally. When hosting on a server, some providers (e.g. GitHub Pages) do not send Cross-Origin Isolation headers, so the frontend uses [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) to add them.

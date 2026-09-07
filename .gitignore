@@ -1,7 +1,15 @@
 build*/
+build-wasm/
 .vscode/
 .DS_STORE
 photonlog.txt
+_deps/
+
+# Web frontend
+web/node_modules/
+web/dist/
+web/public/engine/*
+!web/public/engine/.gitkeep
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python

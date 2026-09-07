@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Photon Chess</title>
+		<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+		<meta name="description" content="Play chess against the Photon engine in your browser." />
+		<script src="coi-serviceworker.js"></script>
+	</head>
+	<body>
+		<div id="app">
+			<header class="masthead">
+				<div class="wordmark">Photon</div>
+				<p class="tagline">Play against Photon in your browser</p>
+			</header>
+
+			<section id="screen-loading" class="panel">
+				<div class="spinner" aria-hidden="true"></div>
+				<p id="loading-text">Loading Photon…</p>
+			</section>
+
+			<section id="screen-setup" class="panel" hidden>
+				<h1>New game</h1>
+				<fieldset>
+					<legend>Your side</legend>
+					<div class="choices">
+						<label class="choice"><input type="radio" name="side" value="white" checked /> White</label>
+						<label class="choice"><input type="radio" name="side" value="black" /> Black</label>
+						<label class="choice"><input type="radio" name="side" value="random" /> Random</label>
+					</div>
+				</fieldset>
+				<fieldset>
+					<legend>Time control</legend>
+					<div class="choices" id="time-presets">
+						<label class="choice"><input type="radio" name="time" value="1" /> 1</label>
+						<label class="choice"><input type="radio" name="time" value="1+1" /> 1+1</label>
+						<label class="choice"><input type="radio" name="time" value="3" checked /> 3</label>
+						<label class="choice"><input type="radio" name="time" value="3+1" /> 3+1</label>
+						<label class="choice"><input type="radio" name="time" value="5" /> 5</label>
+						<label class="choice"><input type="radio" name="time" value="custom" /> Custom</label>
+					</div>
+					<div id="custom-time" class="custom-time" hidden>
+						<label>Minutes <input id="custom-min" type="number" min="0.1" step="0.5" value="3" /></label>
+						<label>Increment (s) <input id="custom-inc" type="number" min="0" step="1" value="0" /></label>
+					</div>
+				</fieldset>
+				<button id="btn-start" class="primary" type="button">Start game</button>
+			</section>
+
+			<section id="screen-play" hidden>
+				<div class="play-layout">
+					<div class="board-column">
+						<div class="board-wrap" id="board-wrap">
+							<div id="board"></div>
+							<div id="promo-overlay" class="promo-overlay" hidden>
+								<div class="promo-choices" data-color="white">
+									<button type="button" data-piece="q" class="cg-wrap" aria-label="Queen">
+										<piece class="queen white"></piece>
+									</button>
+									<button type="button" data-piece="r" class="cg-wrap" aria-label="Rook">
+										<piece class="rook white"></piece>
+									</button>
+									<button type="button" data-piece="b" class="cg-wrap" aria-label="Bishop">
+										<piece class="bishop white"></piece>
+									</button>
+									<button type="button" data-piece="n" class="cg-wrap" aria-label="Knight">
+										<piece class="knight white"></piece>
+									</button>
+								</div>
+								<button type="button" class="link" data-role="cancel">Cancel</button>
+							</div>
+						</div>
+						<div id="engine-status" class="engine-status">Ready</div>
+					</div>
+					<aside class="side-panel">
+						<div id="clock-top" class="clock" data-side="opponent">
+							<span class="clock-label"></span>
+							<span class="clock-time">0:00</span>
+						</div>
+						<div class="move-list-wrap">
+							<div class="move-list-header">
+								<h2>Moves</h2>
+								<button id="btn-copy-moves-pgn" class="link" type="button">Copy PGN</button>
+							</div>
+							<ol id="move-list" class="move-list"></ol>
+						</div>
+						<div id="clock-bottom" class="clock active" data-side="player">
+							<span class="clock-label"></span>
+							<span class="clock-time">0:00</span>
+						</div>
+						<button id="btn-resign" class="danger" type="button">Resign</button>
+					</aside>
+				</div>
+			</section>
+		</div>
+
+		<dialog id="result-dialog">
+			<h2 id="result-title">Game over</h2>
+			<p id="result-detail"></p>
+			<pre id="result-pgn" class="pgn-view"></pre>
+			<div class="dialog-actions">
+				<button id="btn-export-pgn" class="primary" type="button">Copy PGN to clipboard</button>
+				<button id="btn-view-board" type="button">View board</button>
+			</div>
+		</dialog>
+
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

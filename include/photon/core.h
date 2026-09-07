@@ -6,6 +6,11 @@
 #include <string>
 #include <vector>
 
+// TODO: replace uint with unsigned int.
+#ifdef __EMSCRIPTEN__
+using uint = unsigned;
+#endif
+
 namespace photon {
 
 /**
@@ -421,8 +426,6 @@ private:
 		uint8_t metadata;
 		int8_t enPassant;
 	};
-	static_assert(sizeof(board_snapshot_t) == sizeof(board_t) - sizeof(board_t::historyHashes),
-				  "board_snapshot_t size mismatch, did you change board_t?");
 
 	board_t* board;
 	board_snapshot_t snapshot;

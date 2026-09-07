@@ -1,0 +1,6 @@
+The Photon web frontend in this directory is licensed under the
+GNU General Public License v3.0 or later. It incorporates chessground,
+which is GPL-3.0.
+
+The Photon chess engine outside this directory remains under the MIT License
+(see the repository root LICENSE).
