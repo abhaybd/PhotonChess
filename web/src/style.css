@@ -2,14 +2,14 @@
 	color-scheme: dark;
 	--bg: #07090f;
 	--bg-elev: #121624;
-	--line: rgba(148, 197, 255, 0.16);
-	--text: #eef4ff;
-	--muted: #93a0bb;
-	--accent: #7ad7ff;
-	--accent-2: #cbb4ff;
+	--line: rgba(255, 176, 96, 0.16);
+	--text: #fff4ea;
+	--muted: #b5a394;
+	--accent: #ff9a4a;
+	--accent-2: #ffc46b;
 	--danger: #ff6b85;
-	--board-light: #dce7f5;
-	--board-dark: #3d5278;
+	--board-light: #f0d9b5;
+	--board-dark: #f0d9b5;
 	--shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
 	font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
 }
@@ -27,8 +27,8 @@ body {
 	margin: 0;
 	min-height: 100%;
 	background:
-		radial-gradient(1200px 500px at 10% -10%, rgba(122, 215, 255, 0.16), transparent 50%),
-		radial-gradient(900px 500px at 100% 0%, rgba(203, 180, 255, 0.12), transparent 45%),
+		radial-gradient(1200px 500px at 10% -10%, rgba(255, 154, 74, 0.16), transparent 50%),
+		radial-gradient(900px 500px at 100% 0%, rgba(255, 196, 107, 0.12), transparent 45%),
 		var(--bg);
 	color: var(--text);
 }
@@ -54,15 +54,26 @@ body {
 	margin-bottom: 28px;
 }
 
+.brand {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+}
+
+.brand-logo {
+	width: 2.6rem;
+	height: 2.6rem;
+	flex-shrink: 0;
+	object-fit: contain;
+}
+
 .wordmark {
 	font-size: 2.4rem;
 	font-weight: 700;
 	letter-spacing: 0.18em;
 	text-transform: uppercase;
-	background: linear-gradient(120deg, var(--accent), #ffffff 45%, var(--accent-2));
-	-webkit-background-clip: text;
-	background-clip: text;
-	color: transparent;
+	color: var(--accent);
 }
 
 .tagline {
@@ -122,7 +133,7 @@ legend {
 .choice:has(input:checked) {
 	border-color: var(--accent);
 	color: var(--accent);
-	background: rgba(122, 215, 255, 0.08);
+	background: rgba(255, 154, 74, 0.08);
 }
 
 .choice input {
@@ -166,8 +177,8 @@ button {
 button.primary {
 	width: 100%;
 	border-color: transparent;
-	background: linear-gradient(120deg, #5cc4f0, #8a6dff);
-	color: #071018;
+	background: linear-gradient(120deg, #ff8a3d, #ffc46b);
+	color: #1a1008;
 	font-weight: 700;
 }
 
@@ -279,7 +290,7 @@ button.link {
 
 .clock.active {
 	border-color: var(--accent);
-	box-shadow: inset 0 0 0 1px rgba(122, 215, 255, 0.25);
+	box-shadow: inset 0 0 0 1px rgba(255, 154, 74, 0.25);
 }
 
 .clock.low .clock-time {
@@ -454,6 +465,11 @@ dialog h2 {
 	.wordmark {
 		font-size: 1.8rem;
 		letter-spacing: 0.12em;
+	}
+
+	.brand-logo {
+		width: 2rem;
+		height: 2rem;
 	}
 
 	.promo-choices {
