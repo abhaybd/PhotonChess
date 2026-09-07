@@ -3,7 +3,7 @@ import 'chessground/assets/chessground.brown.css';
 import 'chessground/assets/chessground.cburnett.css';
 import './style.css';
 import { BoardView } from './board';
-import { PhotonEngine } from './engine';
+import { formatAbsoluteScore, PhotonEngine } from './engine';
 import { GameController } from './game';
 import { buildPgn } from './pgn';
 import {
@@ -119,7 +119,7 @@ function engineLine(snap: ReturnType<GameController['snapshot']>): string {
 	if (snap.thinking) {
 		const info = snap.engineInfo;
 		if (info?.depth && info.score) {
-			return `Photon thinking  d${info.depth}  ${info.score}`;
+			return `Photon thinking  depth ${info.depth} (${formatAbsoluteScore(info.score, snap.turn)})`;
 		}
 		return 'Photon thinking…';
 	}

@@ -1,3 +1,5 @@
+import type { Color, EngineInfo, EngineScore } from './types';
+
 export interface PhotonModule {
 	ccall: (
 		name: string,
@@ -25,12 +27,7 @@ export interface BestMove {
 	ponder?: string;
 }
 
-export interface ParsedInfo {
-	depth?: number;
-	score?: string;
-	nodes?: number;
-	nps?: number;
-}
+export type ParsedInfo = EngineInfo;
 
 type LineHandler = (line: string) => void;
 
@@ -180,14 +177,24 @@ export function parseInfo(line: string): ParsedInfo | null {
 			const kind = parts[++i];
 			const value = parts[++i];
 			if (kind === 'cp' && value !== undefined) {
-				const cp = Number(value);
-				info.score = `${cp >= 0 ? '+' : ''}${(cp / 100).toFixed(2)}`;
+				info.score = { kind: 'cp', value: Number(value) };
 			} else if (kind === 'mate' && value !== undefined) {
-				info.score = `M${value}`;
+				info.score = { kind: 'mate', value: Number(value) };
 			}
 		} else if (token === 'pv') {
 			break;
 		}
 	}
 	return info;
+}
+
+/** Format a UCI side-to-move score as White-positive (absolute). */
+export function formatAbsoluteScore(score: EngineScore, sideToMove: Color): string {
+	const whiteSign = sideToMove === 'black' ? -1 : 1;
+	if (score.kind === 'cp') {
+		const cp = score.value * whiteSign;
+		return `${cp >= 0 ? '+' : ''}${(cp / 100).toFixed(2)}`;
+	}
+	const mate = score.value * whiteSign;
+	return `M${mate}`;
 }

@@ -23,9 +23,13 @@ export interface GameResult {
 	text: string;
 }
 
+export type EngineScore =
+	| { kind: 'cp'; value: number }
+	| { kind: 'mate'; value: number };
+
 export interface EngineInfo {
 	depth?: number;
-	score?: string;
+	score?: EngineScore;
 	nodes?: number;
 	nps?: number;
 }
