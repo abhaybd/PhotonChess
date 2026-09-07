@@ -16,6 +16,8 @@ Photon is a UCI-compliant chess engine written from scratch in C++! It uses Prin
 - Pondering
 - Reverse Futility Pruning
 
+Play against it in your browser [here](https://abhaybd.github.io/PhotonChess)!
+
 ## Environment Variables
 
 The following environment variables can be used to configure non-search behavior.
@@ -25,6 +27,10 @@ The following environment variables can be used to configure non-search behavior
 | `PHOTON_DISABLE_LOGGING` | If set (to any value), disables writing logs to a file.                                                  | unset (logging on)   |
 | `PHOTON_LOG_FILE`        | Path to the log file. Ignored when `PHOTON_DISABLE_LOGGING` is set.                                      | `photonlog.txt`      |
 | `PHOTON_PROFILE_FILE`    | Path to the profiler output file. Only used in builds configured with `-DPHOTON_PROFILING_ENABLED=ON`.   | `photon_profile.txt` |
+
+## Usage (Browser)
+
+PhotonChess can compile to WASM and run in your browser. Check it out [here](https://abhaybd.github.io/PhotonChess)! The web version of PhotonChess runs at a slightly reduced strength, compile and play locally for full strength.
 
 ## Usage (GUI)
 
