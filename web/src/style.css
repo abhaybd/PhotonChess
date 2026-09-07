@@ -59,6 +59,21 @@ body {
 	align-items: center;
 	justify-content: center;
 	gap: 12px;
+	width: fit-content;
+	margin-inline: auto;
+	text-decoration: none;
+	color: inherit;
+}
+
+.brand:hover .wordmark,
+.brand:focus-visible .wordmark {
+	color: var(--accent-2);
+}
+
+.brand:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 6px;
+	border-radius: 8px;
 }
 
 .brand-logo {
