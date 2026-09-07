@@ -9,6 +9,7 @@ _deps/
 web/node_modules/
 web/dist/
 web/public/engine/*
+web/.vite/
 !web/public/engine/.gitkeep
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
